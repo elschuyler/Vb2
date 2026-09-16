@@ -2,15 +2,15 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E8EAED"
+    android:background="@color/keyboard_canvas_background"
     android:orientation="vertical">
 
     <!-- Fixed Non-Scrolling Category Tab Strip (HeliBoard parity) -->
     <LinearLayout
         android:id="@+id/llCategoryTabs"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="#E8EAED"
+        android:layout_height="36dp"
+        android:background="@color/keyboard_canvas_background"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="4dp" />
@@ -18,7 +18,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#D1D5DB" />
+        android:background="@color/toolbar_divider_color" />
 
     <!-- Emoji Glyphs Grid Area -->
     <androidx.recyclerview.widget.RecyclerView

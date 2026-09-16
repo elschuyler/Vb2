@@ -5,8 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
-import com.example.R
-import com.example.logger.LogViewerActivity
+import helium314.keyboard.latin.R
 
 class SettingsActivity : Activity() {
 
@@ -16,20 +15,29 @@ class SettingsActivity : Activity() {
 
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
+        // 1. Appearance (Sliders & Desktop Shortcuts subpage)
+        findViewById<LinearLayout>(R.id.cardAppearance).setOnClickListener {
+            startActivity(Intent(this, AppearanceSettingsActivity::class.java))
+        }
+
+        // 2. Layout Customization (Comma popup & Toolbar tools)
         findViewById<LinearLayout>(R.id.cardLayoutCustomization).setOnClickListener {
             startActivity(Intent(this, LayoutCustomizationActivity::class.java))
         }
 
-        findViewById<LinearLayout>(R.id.cardPromptList).setOnClickListener {
-            startActivity(Intent(this, QuickNotesSettingsActivity::class.java))
+        // 3. Voice Input (Placeholder)
+        findViewById<LinearLayout>(R.id.cardVoiceInput).setOnClickListener {
+            startActivity(Intent(this, VoiceInputSettingsActivity::class.java))
         }
 
-        findViewById<LinearLayout>(R.id.cardSecurity).setOnClickListener {
-            // Prepared for Phase 6: Security Settings page
+        // 4. Security Vault (Placeholder)
+        findViewById<LinearLayout>(R.id.cardSecurityVault).setOnClickListener {
+            startActivity(Intent(this, SecurityVaultSettingsActivity::class.java))
         }
 
-        findViewById<LinearLayout>(R.id.cardLogKeeper).setOnClickListener {
-            startActivity(Intent(this, LogViewerActivity::class.java))
+        // 5. Advanced (Log Keeper & Backup/Restore)
+        findViewById<LinearLayout>(R.id.cardAdvanced).setOnClickListener {
+            startActivity(Intent(this, AdvancedSettingsActivity::class.java))
         }
     }
 }

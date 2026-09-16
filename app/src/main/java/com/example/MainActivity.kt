@@ -1,44 +1,39 @@
 package com.example
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
-import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import com.example.ime.settings.SettingsActivity
-import com.example.logger.LogKeeper
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.ui.theme.MyApplicationTheme
 
-class MainActivity : Activity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        LogKeeper.logComponentStart("MainActivity")
-        setContentView(R.layout.activity_main)
-
-        setupViews()
-    }
-
-    private fun setupViews() {
-        findViewById<Button>(R.id.btnSettings).setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+class MainActivity : ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    enableEdgeToEdge()
+    setContent {
+      MyApplicationTheme {
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+          Greeting(name = "Android", modifier = Modifier.padding(innerPadding))
         }
-
-        findViewById<Button>(R.id.btnEnableIme).setOnClickListener {
-            LogKeeper.logEvent("Onboarding", "User clicked Open System Settings")
-            startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-        }
-
-        findViewById<Button>(R.id.btnSelectIme).setOnClickListener {
-            LogKeeper.logEvent("Onboarding", "User clicked Switch Input Method")
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showInputMethodPicker()
-        }
+      }
     }
+  }
+}
 
-    override fun onDestroy() {
-        LogKeeper.logComponentStop("MainActivity")
-        super.onDestroy()
-    }
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+  Text(text = "Hello $name!", modifier = modifier)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+  MyApplicationTheme { Greeting("Android") }
 }

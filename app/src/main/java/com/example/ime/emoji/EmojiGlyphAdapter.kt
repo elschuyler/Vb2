@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.R
+import helium314.keyboard.latin.R
 
 class EmojiGlyphAdapter(
     private val onEmojiClick: (String) -> Unit
