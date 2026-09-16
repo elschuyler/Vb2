@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/keyboard_canvas_background"
+    android:orientation="vertical">
+
+    <!-- Top Suggestion Bar Strip: Only Toolbar with Common Desktop Tools (~30dp) -->
+    <LinearLayout
+        android:id="@+id/desktopToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="@color/keyboard_canvas_background"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp">
+
+        <!-- Undo (Desktop Ctrl+Z) -->
+        <ImageButton
+            android:id="@+id/btnDesktopUndo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Undo (Ctrl+Z)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_undo" />
+
+        <!-- Redo (Desktop Ctrl+Y) -->
+        <ImageButton
+            android:id="@+id/btnDesktopRedo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Redo (Ctrl+Y)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_redo" />
+
+        <!-- Top of Document (Desktop Ctrl+Home) -->
+        <ImageButton
+            android:id="@+id/btnDesktopTop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Top of Document (Ctrl+Home)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_page_start" />
+
+        <!-- Bottom of Document (Desktop Ctrl+End) -->
+        <ImageButton
+            android:id="@+id/btnDesktopBottom"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Bottom of Document (Ctrl+End)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_page_end" />
+
+        <!-- Pinned: Select Word (Tap: Select Word, Long Press: Select All) -->
+        <ImageButton
+            android:id="@+id/btnSelectWord"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Select Word (Long Press: Select All)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_select_word" />
+
+        <!-- Pinned: Copy (Tap: Copy, Long Press: Prompt List) -->
+        <ImageButton
+            android:id="@+id/btnCopyDesktop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Copy (Long Press: Prompt List)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_copy" />
+
+        <!-- Pinned: Paste (Tap: Paste, Long Press: Clipboard) -->
+        <ImageButton
+            android:id="@+id/btnPasteDesktop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Paste (Long Press: Clipboard History)"
+            android:scaleType="fitCenter"
+            android:padding="5dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_paste" />
+
+        <!-- Close / Dismiss to Alpha -->
+        <ImageButton
+            android:id="@+id/btnCloseModal"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Close Shortcuts"
+            android:scaleType="fitCenter"
+            android:padding="6dp"
+            android:tint="#0F172A"
+            android:src="@drawable/ic_close" />
+    </LinearLayout>
+
+    <!-- Main Content Area: Left 7 Fat Buttons in 3-2-2 Grid (65%) + Right D-Pad & Home (35%) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp">
+
+        <!-- Left: 7 Action Cards Layout (3-2-2 arrangement, Takes 65% width) -->
+        <LinearLayout
+            android:id="@+id/containerActionCards"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="65"
+            android:orientation="vertical"
+            android:paddingEnd="3dp">
+
+            <!-- Row 1: 3 Fat Buttons (e.g. Find, Replace, Save) -->
+            <LinearLayout
+                android:id="@+id/rowCard1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:layout_marginBottom="3dp">
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="3dp"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Find"
+                        android:textColor="#0F172A"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="^F"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="3dp"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Replace"
+                        android:textColor="#0F172A"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="^H"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Save"
+                        android:textColor="#0F172A"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="^S"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- Row 2: 2 Fat Buttons (e.g. Comment, Duplicate) -->
+            <LinearLayout
+                android:id="@+id/rowCard2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:layout_marginBottom="3dp">
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn4"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="3dp"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Comment"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="^/"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn5"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Duplicate"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="^D"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <!-- Row 3: 2 Fat Buttons (e.g. Indent, Outdent) -->
+            <LinearLayout
+                android:id="@+id/rowCard3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn6"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="3dp"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Indent"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="Tab"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/cardBtn7"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="3dp">
+                    <TextView
+                        android:id="@+id/tvCardAction7"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:text="Outdent"
+                        android:textColor="#0F172A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+                    <TextView
+                        android:id="@+id/tvCardCombo7"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentBottom="true"
+                        android:layout_alignParentEnd="true"
+                        android:text="⇧Tab"
+                        android:textColor="#64748B"
+                        android:textSize="9sp" />
+                </RelativeLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Right: Navigation Arrows D-pad with Home button in center (Takes 35% width) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="35"
+            android:orientation="vertical"
+            android:paddingStart="3dp">
+
+            <!-- Up Arrow Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:layout_marginBottom="3dp">
+
+                <ImageButton
+                    android:id="@+id/btnArrowUp"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:contentDescription="Arrow Up"
+                    android:scaleType="fitCenter"
+                    android:padding="8dp"
+                    android:tint="#0F172A"
+                    android:src="@drawable/ic_arrow_up" />
+            </LinearLayout>
+
+            <!-- Middle Row: Left, Home, Right -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="3dp">
+
+                <ImageButton
+                    android:id="@+id/btnArrowLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:contentDescription="Arrow Left"
+                    android:scaleType="fitCenter"
+                    android:padding="8dp"
+                    android:tint="#0F172A"
+                    android:src="@drawable/ic_arrow_left"
+                    android:layout_marginEnd="3dp" />
+
+                <ImageButton
+                    android:id="@+id/btnHome"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:contentDescription="Home (Line Start)"
+                    android:scaleType="fitCenter"
+                    android:padding="8dp"
+                    android:tint="#0F172A"
+                    android:src="@drawable/ic_home"
+                    android:layout_marginEnd="3dp" />
+
+                <ImageButton
+                    android:id="@+id/btnArrowRight"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:contentDescription="Arrow Right"
+                    android:scaleType="fitCenter"
+                    android:padding="8dp"
+                    android:tint="#0F172A"
+                    android:src="@drawable/ic_arrow_right" />
+            </LinearLayout>
+
+            <!-- Down Arrow Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center">
+
+                <ImageButton
+                    android:id="@+id/btnArrowDown"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/selector_desktop_shortcut_fat_key"
+                    android:contentDescription="Arrow Down"
+                    android:scaleType="fitCenter"
+                    android:padding="8dp"
+                    android:tint="#0F172A"
+                    android:src="@drawable/ic_arrow_down" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom 4 Buttons: [ABC], [Space], [Backspace (Desktop)], [Enter (Desktop)] -->
+    <com.example.ime.modal.ModalBottomBarView
+        android:id="@+id/desktopBottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</LinearLayout>

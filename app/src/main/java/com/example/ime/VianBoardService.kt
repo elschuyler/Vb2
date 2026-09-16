@@ -9,7 +9,10 @@ import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.text.InputType
+import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -24,12 +27,17 @@ import com.example.ime.clipboard.VianClipboardModalView
 import com.example.ime.emoji.VianEmojiModalView
 import com.example.ime.quicknotes.QuickNotesStorage
 import com.example.ime.quicknotes.VianQuickNotesModalView
+import com.example.ime.voice.VianVoiceModalView
 import com.example.ime.keyboard.KeyData
 import com.example.ime.keyboard.KeyType
 import com.example.ime.keyboard.VianKeyboardView
 import com.example.ime.settings.SettingsActivity
 import com.example.ime.toolbar.ToolbarPreferences
 import com.example.ime.toolbar.ToolbarTool
+import com.example.ime.security.MasterPatternStore
+import com.example.ime.security.VaultSessionManager
+import com.example.ime.security.VaultType
+import com.example.ime.security.VianPatternUnlockView
 import com.example.logger.LogKeeper
 
 class VianBoardService : InputMethodService() {
@@ -121,6 +129,7 @@ class VianBoardService : InputMethodService() {
             onToolbarToolLongClick = { tool -> handleToolbarToolLongClick(tool) }
             onAnchorLongClick = { handleAnchorLongClick() }
             onCommaPopupSelected = { item -> handleCommaPopupAction(item) }
+            onSymbolsLongClick = { showPatternUnlockModal(VaultType.SECURITY) }
         }
         container.addView(view)
         keyboardView = view
@@ -228,16 +237,16 @@ class VianBoardService : InputMethodService() {
                 }
             }
             ToolbarTool.VOICE -> {
-                Toast.makeText(this, "Voice input requested", Toast.LENGTH_SHORT).show()
+                showVoiceModal()
             }
             ToolbarTool.PROMPT_LIST -> {
                 showQuickNotesModal()
             }
             ToolbarTool.SECURITY_VAULT -> {
-                Toast.makeText(this, "Security vault", Toast.LENGTH_SHORT).show()
+                showPatternUnlockModal(VaultType.SECURITY)
             }
             ToolbarTool.DESKTOP_SHORTCUTS -> {
-                Toast.makeText(this, "Desktop shortcuts modal", Toast.LENGTH_SHORT).show()
+                showDesktopShortcutsModal()
             }
             ToolbarTool.SETTINGS -> {
                 val intent = Intent(this, SettingsActivity::class.java).apply {
@@ -499,6 +508,12 @@ class VianBoardService : InputMethodService() {
         return super.onKeyUp(keyCode, event)
     }
 
+    private fun getModalHeight(): Int {
+        val minHeightPx = (260 * resources.displayMetrics.density).toInt()
+        val kbHeight = keyboardView?.height ?: 0
+        return if (kbHeight > minHeightPx) kbHeight else minHeightPx
+    }
+
     private fun showClipboardModal() {
         val container = inputViewContainer ?: return
         dismissActiveModal()
@@ -506,7 +521,7 @@ class VianBoardService : InputMethodService() {
         val clipboardView = VianClipboardModalView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                keyboardView?.height?.coerceAtLeast(300) ?: FrameLayout.LayoutParams.WRAP_CONTENT
+                getModalHeight()
             )
             onDismissToAlpha = { dismissActiveModal() }
             onCommitText = { text -> currentInputConnection?.commitText(text, 1) }
@@ -539,7 +554,7 @@ class VianBoardService : InputMethodService() {
         val quickNotesView = VianQuickNotesModalView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                keyboardView?.height?.coerceAtLeast(300) ?: FrameLayout.LayoutParams.WRAP_CONTENT
+                getModalHeight()
             )
             onDismissToAlpha = { dismissActiveModal() }
             onCommitText = { text -> currentInputConnection?.commitText(text, 1) }
@@ -583,7 +598,7 @@ class VianBoardService : InputMethodService() {
         val emojiView = VianEmojiModalView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                keyboardView?.height?.coerceAtLeast(300) ?: FrameLayout.LayoutParams.WRAP_CONTENT
+                getModalHeight()
             )
             onDismissToAlpha = { dismissActiveModal() }
             onEmojiCommit = { emoji -> currentInputConnection?.commitText(emoji, 1) }
@@ -597,8 +612,290 @@ class VianBoardService : InputMethodService() {
         LogKeeper.logEvent("IME", "Emoji modal opened on-demand")
     }
 
+    private fun showVoiceModal() {
+        val container = inputViewContainer ?: return
+        dismissActiveModal()
+
+        val voiceHeightPx = (160 * resources.displayMetrics.density).toInt()
+        val voiceView = VianVoiceModalView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                voiceHeightPx
+            )
+            onDismissToAlpha = { dismissActiveModal() }
+            onCommitText = { text -> currentInputConnection?.commitText(text, 1) }
+            onDelete = { sendDelete() }
+            onEnter = { sendEnter() }
+        }
+
+        keyboardView?.visibility = View.INVISIBLE
+        container.addView(voiceView)
+        activeModalView = voiceView
+        voiceView.startVoiceInput()
+        LogKeeper.logEvent("IME", "Voice modal opened on-demand (~160dp)")
+    }
+
+    private fun sendDesktopKeyEvent(keyCode: Int, metaState: Int = 0) {
+        val ic = currentInputConnection
+        val now = SystemClock.uptimeMillis()
+        val isCtrl = (metaState and KeyEvent.META_CTRL_ON) != 0
+        val isShift = (metaState and KeyEvent.META_SHIFT_ON) != 0
+        val isAlt = (metaState and KeyEvent.META_ALT_ON) != 0
+
+        // 1. Dispatch modifier down events as physical keyboard hardware source
+        if (isCtrl) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT, 0,
+                KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+        if (isShift) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, 0,
+                KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+        if (isAlt) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ALT_LEFT, 0,
+                KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+
+        // 2. Dispatch target key down and up
+        ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState,
+            KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+            InputDevice.SOURCE_KEYBOARD))
+        ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState,
+            KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+            KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+            InputDevice.SOURCE_KEYBOARD))
+
+        // 3. Dispatch modifier up events
+        if (isAlt) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ALT_LEFT, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+        if (isShift) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+        if (isCtrl) {
+            ic?.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                KeyEvent.FLAG_FROM_SYSTEM or KeyEvent.FLAG_KEEP_TOUCH_MODE or KeyEvent.FLAG_SOFT_KEYBOARD,
+                InputDevice.SOURCE_KEYBOARD))
+        }
+
+        // Fallback: standard sendDownUpKeyEvents if IC didn't consume
+        sendDownUpKeyEvents(keyCode, metaState)
+    }
+
+    private fun showDesktopShortcutsModal() {
+        val container = inputViewContainer ?: return
+        dismissActiveModal()
+
+        // Shorter than normal keyboard: 72% height or max 195dp, giving maximum screen real estate to web code editors
+        val kbHeight = keyboardView?.height ?: (260 * resources.displayMetrics.density).toInt()
+        val desktopModalHeight = ((kbHeight * 0.72f).toInt()).coerceAtLeast((185 * resources.displayMetrics.density).toInt())
+
+        val shortcutsView = com.example.ime.desktop.VianDesktopShortcutsModalView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                desktopModalHeight
+            )
+            onDismissToAlpha = { dismissActiveModal() }
+            onDesktopAction = { actionId -> executeDesktopAction(actionId) }
+            onNavigate = { dir ->
+                when (dir) {
+                    1 -> sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_LEFT, 0)
+                    2 -> sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, 0)
+                    3 -> sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_UP, 0)
+                    4 -> sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_DOWN, 0)
+                }
+            }
+            onHome = {
+                // Line start / Home
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_MOVE_HOME, 0)
+            }
+            onUndo = {
+                currentInputConnection?.performContextMenuAction(android.R.id.undo)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_Z, KeyEvent.META_CTRL_ON)
+            }
+            onRedo = {
+                currentInputConnection?.performContextMenuAction(android.R.id.redo)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_Y, KeyEvent.META_CTRL_ON)
+            }
+            onDocTop = {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.META_CTRL_ON)
+            }
+            onDocBottom = {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_MOVE_END, KeyEvent.META_CTRL_ON)
+            }
+            onSelectWord = {
+                selectSurroundingWord()
+            }
+            onSelectAll = {
+                currentInputConnection?.performContextMenuAction(android.R.id.selectAll)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this@VianBoardService, "Select All", Toast.LENGTH_SHORT).show()
+            }
+            onCopy = {
+                currentInputConnection?.performContextMenuAction(android.R.id.copy)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_C, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this@VianBoardService, "Copied", Toast.LENGTH_SHORT).show()
+                handler.postDelayed({ capturePrimaryClip() }, 100)
+            }
+            onPromptList = {
+                showQuickNotesModal()
+            }
+            onPaste = {
+                currentInputConnection?.performContextMenuAction(android.R.id.paste)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_V, KeyEvent.META_CTRL_ON)
+            }
+            onClipboard = {
+                showClipboardModal()
+            }
+            onDeleteDesktop = {
+                // Raw desktop backspace keyevent for editor outdenting/multicursor delete
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_DEL, 0)
+            }
+            onEnterDesktop = {
+                // Raw desktop enter keyevent for editor auto-indent and bracket-closing
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_ENTER, 0)
+            }
+            onSpace = {
+                currentInputConnection?.commitText(" ", 1)
+            }
+        }
+
+        keyboardView?.visibility = View.INVISIBLE
+        container.addView(shortcutsView)
+        activeModalView = shortcutsView
+        LogKeeper.logEvent("IME", "Desktop Shortcuts modal opened (compact web code editor mode)")
+    }
+
+    private fun executeDesktopAction(actionId: String) {
+        val ic = currentInputConnection
+        when (actionId) {
+            "find" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_F, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Find (Ctrl+F)", Toast.LENGTH_SHORT).show()
+            }
+            "replace" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_H, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Replace (Ctrl+H)", Toast.LENGTH_SHORT).show()
+            }
+            "copy_all" -> {
+                ic?.performContextMenuAction(android.R.id.selectAll)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
+                handler.postDelayed({
+                    ic?.performContextMenuAction(android.R.id.copy)
+                    sendDesktopKeyEvent(KeyEvent.KEYCODE_C, KeyEvent.META_CTRL_ON)
+                    Toast.makeText(this, "Copied All", Toast.LENGTH_SHORT).show()
+                    handler.postDelayed({ capturePrimaryClip() }, 100)
+                }, 50)
+            }
+            "delete_all" -> {
+                ic?.performContextMenuAction(android.R.id.selectAll)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
+                handler.postDelayed({
+                    sendDesktopKeyEvent(KeyEvent.KEYCODE_DEL, 0)
+                    Toast.makeText(this, "Deleted All", Toast.LENGTH_SHORT).show()
+                }, 50)
+            }
+            "goto" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_G, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Go To (Ctrl+G)", Toast.LENGTH_SHORT).show()
+            }
+            "save" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_S, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Saved (Ctrl+S)", Toast.LENGTH_SHORT).show()
+            }
+            "undo" -> {
+                ic?.performContextMenuAction(android.R.id.undo)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_Z, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Undo (Ctrl+Z)", Toast.LENGTH_SHORT).show()
+            }
+            "redo" -> {
+                ic?.performContextMenuAction(android.R.id.redo)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_Y, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Redo (Ctrl+Y)", Toast.LENGTH_SHORT).show()
+            }
+            "select_all" -> {
+                ic?.performContextMenuAction(android.R.id.selectAll)
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON)
+                Toast.makeText(this, "Select All", Toast.LENGTH_SHORT).show()
+            }
+            "select_word" -> {
+                selectSurroundingWord()
+            }
+            "duplicate_line" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_D, KeyEvent.META_CTRL_ON)
+            }
+            "comment_line" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_SLASH, KeyEvent.META_CTRL_ON)
+            }
+            "indent" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_TAB, 0)
+            }
+            "outdent" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_TAB, KeyEvent.META_SHIFT_ON)
+            }
+            "line_up" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.META_ALT_ON)
+            }
+            "line_down" -> {
+                sendDesktopKeyEvent(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.META_ALT_ON)
+            }
+            else -> {
+                Toast.makeText(this, "Action: $actionId", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showPatternUnlockModal(vaultType: VaultType) {
+        val container = inputViewContainer ?: return
+        dismissActiveModal()
+
+        val patternUnlockView = VianPatternUnlockView(this, vaultType).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                getModalHeight()
+            )
+            onDismissToAlpha = { dismissActiveModal() }
+            onUnlockSuccess = { type ->
+                if (type == VaultType.SECURITY) {
+                    VaultSessionManager.unlockSecurity(VaultSessionManager.SECURITY_SESSION_DEFAULT_MS)
+                    Toast.makeText(this@VianBoardService, "Security Vault Unlocked (Session: 3m)", Toast.LENGTH_SHORT).show()
+                } else {
+                    VaultSessionManager.unlockPrivacy(VaultSessionManager.PRIVACY_SESSION_DEFAULT_MS)
+                    Toast.makeText(this@VianBoardService, "Privacy Vault Unlocked (Session: 5m)", Toast.LENGTH_SHORT).show()
+                }
+                dismissActiveModal()
+                LogKeeper.logEvent("IME", "$type vault session activated via pattern unlock")
+            }
+        }
+
+        keyboardView?.visibility = View.INVISIBLE
+        container.addView(patternUnlockView)
+        activeModalView = patternUnlockView
+        LogKeeper.logEvent("IME", "Pattern unlock modal opened for $vaultType")
+    }
+
     private fun dismissActiveModal() {
         activeModalView?.let { modal ->
+            if (modal is VianVoiceModalView) {
+                modal.stopVoiceInput()
+            }
             inputViewContainer?.removeView(modal)
             activeModalView = null
         }
@@ -624,10 +921,13 @@ class VianBoardService : InputMethodService() {
                 Toast.makeText(this, "Log Keeper: ${logs.size} entries", Toast.LENGTH_SHORT).show()
             }
             "Shortcuts" -> {
-                Toast.makeText(this, "Desktop shortcuts modal", Toast.LENGTH_SHORT).show()
+                showDesktopShortcutsModal()
+            }
+            "Prompt List" -> {
+                showQuickNotesModal()
             }
             "Voice" -> {
-                Toast.makeText(this, "Voice input: Coming soon", Toast.LENGTH_SHORT).show()
+                showVoiceModal()
             }
             "One Hand" -> {
                 Toast.makeText(this, "One hand mode: Coming soon", Toast.LENGTH_SHORT).show()

@@ -190,12 +190,13 @@ class KeyboardLayout {
 
         // Pinned tools docked on right edge
         val pinnedToRender = pinnedTools
-        val pinnedBtnWidth = 36f * density
+        val pinnedBtnWidth = 32f * density
         val showPinned = pinnedToRender.isNotEmpty() && (!isToolbarExpanded || !hidePinnedWhenExpanded)
+        val rightMargin = 4f * density
         val rightPinnedTotalWidth = if (showPinned) {
             (pinnedBtnWidth * pinnedToRender.size) + (spacing * (pinnedToRender.size - 1))
         } else 0f
-        val rightPinnedStartX = totalWidth - rightPinnedTotalWidth
+        val rightPinnedStartX = (totalWidth + startX) - rightPinnedTotalWidth - rightMargin
         val middleAreaWidth = (rightPinnedStartX - currentX - spacing).coerceAtLeast(0f)
 
         if (isToolbarExpanded) {
@@ -447,7 +448,7 @@ class KeyboardLayout {
                 type = KeyType.COMMA,
                 weight = 1.0f
             ),
-            KeyData(code = 32, label = "", hintLabel = "…", type = KeyType.SPACE, weight = 4.6f),
+            KeyData(code = 32, label = "", hintLabel = null, type = KeyType.SPACE, weight = 4.6f),
             KeyData(
                 code = '.'.code,
                 label = ".",
@@ -456,7 +457,7 @@ class KeyboardLayout {
                 type = KeyType.PERIOD,
                 weight = 1.0f
             ),
-            KeyData(code = -4, label = "↵", hintLabel = "…", type = KeyType.ENTER, weight = 1.6f)
+            KeyData(code = -4, label = "↵", hintLabel = null, type = KeyType.ENTER, weight = 1.6f)
         )
 
         return listOf(row0, row1, row2, row3, row4)
@@ -492,9 +493,9 @@ class KeyboardLayout {
             KeyData(code = -3, label = "ABC", type = KeyType.SYMBOLS_TOGGLE, weight = 1.3f),
             KeyData(code = ','.code, label = ",", hintLabel = "…", type = KeyType.COMMA, weight = 0.9f),
             KeyData(code = -7, label = "12\n34", type = KeyType.NUMPAD_TOGGLE, weight = 0.9f),
-            KeyData(code = 32, label = "", hintLabel = "…", type = KeyType.SPACE, weight = 4.0f),
+            KeyData(code = 32, label = "", hintLabel = null, type = KeyType.SPACE, weight = 4.0f),
             KeyData(code = '.'.code, label = ".", type = KeyType.PERIOD, weight = 0.9f),
-            KeyData(code = -4, label = "↵", hintLabel = "…", type = KeyType.ENTER, weight = 1.5f)
+            KeyData(code = -4, label = "↵", hintLabel = null, type = KeyType.ENTER, weight = 1.5f)
         )
 
         return listOf(r0, r1, r2, row3, row4)
@@ -528,9 +529,9 @@ class KeyboardLayout {
         val row4 = listOf(
             KeyData(code = -3, label = "ABC", type = KeyType.SYMBOLS_TOGGLE, weight = 1.4f),
             KeyData(code = '<'.code, label = "<", type = KeyType.CHARACTER, weight = 1.0f),
-            KeyData(code = 32, label = "", hintLabel = "…", type = KeyType.SPACE, weight = 4.6f),
+            KeyData(code = 32, label = "", hintLabel = null, type = KeyType.SPACE, weight = 4.6f),
             KeyData(code = '>'.code, label = ">", type = KeyType.CHARACTER, weight = 1.0f),
-            KeyData(code = -4, label = "↵", hintLabel = "…", type = KeyType.ENTER, weight = 1.6f)
+            KeyData(code = -4, label = "↵", hintLabel = null, type = KeyType.ENTER, weight = 1.6f)
         )
 
         return listOf(r0, r1, r2, row3, row4)
@@ -573,7 +574,7 @@ class KeyboardLayout {
             KeyData(code = '0'.code, label = "0", type = KeyType.CHARACTER, weight = 1.4f),
             KeyData(code = '='.code, label = "=", hintLabel = "#", moreKeys = listOf("=", "#"), type = KeyType.CHARACTER, weight = 1.0f),
             KeyData(code = ':'.code, label = ":", hintLabel = ":", type = KeyType.CHARACTER, weight = 0.8f),
-            KeyData(code = -4, label = "↵", hintLabel = "…", type = KeyType.ENTER, weight = 1.4f)
+            KeyData(code = -4, label = "↵", hintLabel = null, type = KeyType.ENTER, weight = 1.4f)
         )
 
         return listOf(row0, row1, row2, row3)
