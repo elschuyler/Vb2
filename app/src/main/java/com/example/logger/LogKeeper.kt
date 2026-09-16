@@ -248,6 +248,10 @@ object LogKeeper {
         appendToDiskLog("[${entry.timestamp}] [${entry.level}] [${entry.tag}] (${entry.memoryUsageMb} MB) ${entry.message}")
     }
 
+    fun logWarning(tag: String, message: String) {
+        logEvent(tag, message, LogLevel.WARN)
+    }
+
     fun logComponentStart(componentName: String) {
         val now = dateFormat.format(Date())
         componentRegistry[componentName] = ComponentStatus(

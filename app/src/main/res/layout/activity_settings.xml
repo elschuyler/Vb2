@@ -4,8 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#F8FAFC"
-    android:fitsSystemWindows="true"
-    android:padding="20dp">
+    android:fitsSystemWindows="true">
 
     <!-- Header -->
     <LinearLayout
@@ -13,17 +12,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="8dp"
-        android:paddingBottom="20dp">
+        android:padding="16dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
 
         <Button
             android:id="@+id/btnBack"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="wrap_content"
             android:text="← Back"
-            android:textSize="12sp"
             android:textColor="#0F172A"
-            android:background="#E2E8F0" />
+            android:background="#E2E8F0"
+            android:minHeight="44dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp" />
 
         <TextView
             android:layout_width="0dp"
@@ -31,23 +33,62 @@
             android:layout_weight="1"
             android:text="Settings"
             android:textColor="#0F172A"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginStart="12dp" />
+            android:gravity="center"
+            android:layout_marginEnd="40dp" />
     </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <!-- Item 1: Layout Customization -->
+            <!-- 1. Appearance (Sliders & Desktop Shortcuts) -->
+            <LinearLayout
+                android:id="@+id/cardAppearance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_palette"
+                    android:contentDescription="Appearance" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Appearance"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#94A3B8"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <!-- 2. Layout Customization (Comma Key Popup & Toolbar Tools) -->
             <LinearLayout
                 android:id="@+id/cardLayoutCustomization"
                 android:layout_width="match_parent"
@@ -55,204 +96,149 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="🎨"
-                    android:textSize="22sp"
-                    android:gravity="center" />
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="#0F172A"
+                    android:contentDescription="Layout Customization" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/layout_customization_title"
-                        android:textColor="#0F172A"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/layout_customization_desc"
-                        android:textColor="#64748B"
-                        android:textSize="13sp"
-                        android:layout_marginTop="2dp" />
-                </LinearLayout>
+                    android:text="Layout Customization"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- Item 2: Prompt List -->
+            <!-- 3. Voice Input (Placeholder) -->
             <LinearLayout
-                android:id="@+id/cardPromptList"
+                android:id="@+id/cardVoiceInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="📝"
-                    android:textSize="22sp"
-                    android:gravity="center" />
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_mic"
+                    android:contentDescription="Voice Input" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/prompt_list_settings_title"
-                        android:textColor="#0F172A"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/prompt_list_settings_desc"
-                        android:textColor="#64748B"
-                        android:textSize="13sp"
-                        android:layout_marginTop="2dp" />
-                </LinearLayout>
+                    android:text="Voice Input"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- Item 3: Security -->
+            <!-- 4. Security Vault (Placeholder) -->
             <LinearLayout
-                android:id="@+id/cardSecurity"
+                android:id="@+id/cardSecurityVault"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="🔒"
-                    android:textSize="22sp"
-                    android:gravity="center" />
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_security_vault"
+                    android:contentDescription="Security Vault" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/security_settings_title"
-                        android:textColor="#0F172A"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/security_settings_desc"
-                        android:textColor="#64748B"
-                        android:textSize="13sp"
-                        android:layout_marginTop="2dp" />
-                </LinearLayout>
+                    android:text="Security Vault"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- Item 2: Log Keeper -->
+            <!-- 5. Advanced (Log Keeper & Backup/Restore) -->
             <LinearLayout
-                android:id="@+id/cardLogKeeper"
+                android:id="@+id/cardAdvanced"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="📋"
-                    android:textSize="22sp"
-                    android:gravity="center" />
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_settings"
+                    android:contentDescription="Advanced" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Log Keeper"
-                        android:textColor="#0F172A"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="View memory diagnostics, copy logs, or export file"
-                        android:textColor="#64748B"
-                        android:textSize="13sp"
-                        android:layout_marginTop="2dp" />
-                </LinearLayout>
+                    android:text="Advanced"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
         </LinearLayout>

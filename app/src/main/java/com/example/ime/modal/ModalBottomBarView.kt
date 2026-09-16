@@ -10,14 +10,14 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
-import com.example.R
+import helium314.keyboard.latin.R
 import com.example.ime.keyboard.KeyboardTheme
 
 /**
  * Unified 4-Button Bottom Bar Component exclusively for Clipboard and Emoji modals.
  * Layout: [ ABC ] [ Space ] [ ⌫ Backspace ] [ ↵ Enter ]
  * Built with authentic HeliBoard tactile keycaps (10dp corner radius, 1dp dark bottom bevel,
- * and stadium pill functional keys).
+ * clean unbordered spacebar, and return icon with corner emoji hint).
  */
 class ModalBottomBarView @JvmOverloads constructor(
     context: Context,
@@ -37,6 +37,7 @@ class ModalBottomBarView @JvmOverloads constructor(
     private val spaceRect = RectF()
     private val deleteRect = RectF()
     private val enterRect = RectF()
+    private val tempRectF = RectF()
 
     // Paints
     private val backgroundPaint = Paint()
@@ -45,18 +46,15 @@ class ModalBottomBarView @JvmOverloads constructor(
     private val enterKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val keyBevelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val actionKeyBevelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val enterKeyBevelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pressedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT_BOLD
-    }
-    private val spaceTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT
     }
-
-    private val spaceStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
+    private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.RIGHT
+        typeface = Typeface.DEFAULT
     }
 
     private var deleteIcon: Drawable? = null
@@ -93,26 +91,26 @@ class ModalBottomBarView @JvmOverloads constructor(
     private fun updatePaints() {
         val density = resources.displayMetrics.density
         backgroundPaint.color = theme.backgroundColor
-        keyBgPaint.color = 0xFFFFFFFF.toInt()
-        actionKeyPaint.color = 0xFFE2E8F0.toInt()
+        keyBgPaint.color = theme.keyBackgroundColor
+        actionKeyPaint.color = theme.actionKeyColor
         enterKeyPaint.color = theme.enterKeyColor
+
+        // HeliBoard Rounded Base Border bevel colors
         keyBevelPaint.color = theme.keyBottomBevelColor
         actionKeyBevelPaint.color = theme.actionKeyBevelColor
-        pressedPaint.color = 0xFFCBD5E1.toInt()
+        enterKeyBevelPaint.color = 0xFF263238.toInt()
+        pressedPaint.color = theme.pressedKeyColor
 
-        spaceStrokePaint.color = 0xFFCBD5E1.toInt()
-        spaceStrokePaint.strokeWidth = 1f * density
+        textPaint.color = theme.textColor
+        textPaint.textSize = 14f * density
 
-        textPaint.color = Color.BLACK
-        textPaint.textSize = 15f * density
-
-        spaceTextPaint.color = 0xFF64748B.toInt()
-        spaceTextPaint.textSize = 13f * density
+        hintPaint.color = theme.enterTextColor
+        hintPaint.textSize = 11f * density
     }
 
     private fun loadIcons() {
         deleteIcon = ContextCompat.getDrawable(context, R.drawable.sym_keyboard_delete_rounded)?.mutate()
-        deleteIcon?.setTint(Color.BLACK)
+        deleteIcon?.setTint(theme.textColor)
 
         enterIcon = ContextCompat.getDrawable(context, R.drawable.sym_keyboard_return_rounded)?.mutate()
         enterIcon?.setTint(theme.enterTextColor)
@@ -141,24 +139,32 @@ class ModalBottomBarView @JvmOverloads constructor(
         val topY = vertGap
         val botY = topY + keyHeight
 
-        val actionW = (availableW * 0.16f).coerceIn(48f * density, 80f * density)
-        val spaceW = availableW - (actionW * 3f) - (horizGap * 3f)
+        // Proportions matching HeliBoard bottom row weights:
+        // ABC: 1.4f, Space: 4.6f, Delete: 1.4f, Enter: 1.6f -> Total = 9.0f
+        val totalWeight = 9.0f
+        val totalGaps = horizGap * 3f
+        val widthForKeys = availableW - totalGaps
+
+        val abcW = (1.4f / totalWeight) * widthForKeys
+        val spaceW = (4.6f / totalWeight) * widthForKeys
+        val deleteW = (1.4f / totalWeight) * widthForKeys
+        val enterW = (1.6f / totalWeight) * widthForKeys
 
         // 1. [ ABC ]
         var curX = sidePadding
-        abcRect.set(curX, topY, curX + actionW, botY)
-        curX += actionW + horizGap
+        abcRect.set(curX, topY, curX + abcW, botY)
+        curX += abcW + horizGap
 
         // 2. [ Space ]
         spaceRect.set(curX, topY, curX + spaceW, botY)
         curX += spaceW + horizGap
 
         // 3. [ ⌫ Backspace ]
-        deleteRect.set(curX, topY, curX + actionW, botY)
-        curX += actionW + horizGap
+        deleteRect.set(curX, topY, curX + deleteW, botY)
+        curX += deleteW + horizGap
 
         // 4. [ ↵ Enter ]
-        enterRect.set(curX, topY, curX + actionW, botY)
+        enterRect.set(curX, topY, curX + enterW, botY)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -166,19 +172,18 @@ class ModalBottomBarView @JvmOverloads constructor(
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
         val density = resources.displayMetrics.density
+        val cornerRadius = theme.keyCornerRadiusDp * density
 
-        // 1. Render [ ABC ] stadium pill
-        drawPillKey(canvas, abcRect, actionKeyPaint, null, pressedIndex == 0)
+        // 1. Render [ ABC ] keycap
+        drawKeycap(canvas, abcRect, actionKeyPaint, actionKeyBevelPaint, cornerRadius, pressedIndex == 0)
         val abcBaseline = abcRect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
         canvas.drawText("ABC", abcRect.centerX(), abcBaseline, textPaint)
 
-        // 2. Render [ Space ] stadium pill
-        drawPillKey(canvas, spaceRect, keyBgPaint, spaceStrokePaint, pressedIndex == 1)
-        val spaceBaseline = spaceRect.centerY() - (spaceTextPaint.descent() + spaceTextPaint.ascent()) / 2f
-        canvas.drawText("VianBoard", spaceRect.centerX(), spaceBaseline, spaceTextPaint)
+        // 2. Render [ Space ] clean unbordered keycap (No text, no stroke outline)
+        drawKeycap(canvas, spaceRect, keyBgPaint, keyBevelPaint, cornerRadius, pressedIndex == 1)
 
-        // 3. Render [ ⌫ Backspace ] stadium pill
-        drawPillKey(canvas, deleteRect, actionKeyPaint, null, pressedIndex == 2)
+        // 3. Render [ ⌫ Backspace ] keycap
+        drawKeycap(canvas, deleteRect, actionKeyPaint, actionKeyBevelPaint, cornerRadius, pressedIndex == 2)
         deleteIcon?.let { icon ->
             val iconSize = (22f * density).toInt()
             val left = (deleteRect.centerX() - iconSize / 2f).toInt()
@@ -187,8 +192,8 @@ class ModalBottomBarView @JvmOverloads constructor(
             icon.draw(canvas)
         }
 
-        // 4. Render [ ↵ Enter ] stadium pill
-        drawPillKey(canvas, enterRect, enterKeyPaint, null, pressedIndex == 3)
+        // 4. Render [ ↵ Enter ] keycap with smiley corner hint
+        drawKeycap(canvas, enterRect, enterKeyPaint, enterKeyBevelPaint, cornerRadius, pressedIndex == 3)
         enterIcon?.let { icon ->
             val iconSize = (22f * density).toInt()
             val left = (enterRect.centerX() - iconSize / 2f).toInt()
@@ -196,23 +201,43 @@ class ModalBottomBarView @JvmOverloads constructor(
             icon.setBounds(left, top, left + iconSize, top + iconSize)
             icon.draw(canvas)
         }
+        if (theme.showHints) {
+            val hintX = enterRect.right - (4f * density)
+            val hintY = enterRect.top + (12f * density)
+            canvas.drawText("☺", hintX, hintY, hintPaint)
+        }
     }
 
-    private fun drawPillKey(
+    /**
+     * Tactile layered keycap rendering matching VianKeyboardView and HeliBoard:
+     * 1. 1dp bottom bevel layer
+     * 2. Top keycap surface inset at bottom by 1dp
+     */
+    private fun drawKeycap(
         canvas: Canvas,
-        rect: RectF,
+        bounds: RectF,
         surfacePaint: Paint,
-        strokePaint: Paint?,
+        bevelPaint: Paint,
+        cornerRadius: Float,
         isPressed: Boolean
     ) {
-        val radius = rect.height() / 2f
+        val density = resources.displayMetrics.density
+        val bevelInsetBottomPx = 1.0f * density
+
         if (isPressed) {
-            canvas.drawRoundRect(rect, radius, radius, pressedPaint)
+            canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, pressedPaint)
         } else {
-            canvas.drawRoundRect(rect, radius, radius, surfacePaint)
-            strokePaint?.let {
-                canvas.drawRoundRect(rect, radius, radius, it)
-            }
+            // Bottom bevel layer
+            canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, bevelPaint)
+
+            // Top keycap surface inset at bottom by 1dp
+            tempRectF.set(
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom - bevelInsetBottomPx
+            )
+            canvas.drawRoundRect(tempRectF, cornerRadius, cornerRadius, surfacePaint)
         }
     }
 
