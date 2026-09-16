@@ -10,7 +10,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
-import com.example.R
+import helium314.keyboard.latin.R
 import com.example.ime.modal.ModalBottomBarView
 import com.example.ime.popup.CardLongPressPopup
 

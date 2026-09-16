@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
-import com.example.R
+import helium314.keyboard.latin.R
 import com.example.ime.keyboard.KeyboardTheme
 import com.example.ime.keyboard.VianKeyboardView
 
@@ -49,6 +49,10 @@ class AppearanceSettingsActivity : Activity() {
 
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
         findViewById<Button>(R.id.btnReset).setOnClickListener { resetToDefaults() }
+
+        findViewById<android.widget.LinearLayout>(R.id.cardDesktopShortcuts)?.setOnClickListener {
+            startActivity(android.content.Intent(this, DesktopShortcutsSettingsActivity::class.java))
+        }
 
         loadCurrentSettings()
         setupListeners()

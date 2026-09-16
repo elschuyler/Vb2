@@ -10,7 +10,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.R
+import helium314.keyboard.latin.R
 import com.example.ime.modal.ModalBottomBarView
 import com.example.ime.popup.CardLongPressPopup
 import com.example.ime.quicknotes.QuickNotesStorage
