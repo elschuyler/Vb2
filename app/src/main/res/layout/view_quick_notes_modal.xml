@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E8EAED"
+    android:background="@color/keyboard_canvas_background"
     android:orientation="vertical">
 
     <!-- Speed Island Header / Editing Toolbar (replaces suggestion bar) -->
@@ -10,20 +10,21 @@
         android:id="@+id/speedIslandBar"
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        android:background="#E8EAED"
+        android:background="@color/keyboard_canvas_background"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="6dp">
+        android:paddingHorizontal="4dp">
 
-        <!-- Cursor Navigation Arrows -->
+        <!-- Cursor Navigation Arrows (18dp icons in 32dp bounds, 8dp tool spacing) -->
         <ImageButton
             android:id="@+id/btnNavLeft"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Cursor Left"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_arrow_left" />
 
@@ -31,10 +32,11 @@
             android:id="@+id/btnNavRight"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Cursor Right"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_arrow_right" />
 
@@ -42,10 +44,11 @@
             android:id="@+id/btnNavUp"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Cursor Up"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_arrow_up" />
 
@@ -53,42 +56,45 @@
             android:id="@+id/btnNavDown"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Cursor Down"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_arrow_down" />
 
         <View
             android:layout_width="1dp"
-            android:layout_height="20dp"
-            android:layout_marginHorizontal="4dp"
-            android:background="#CBD5E1" />
+            android:layout_height="16dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/toolbar_divider_color" />
 
         <!-- Quick Notes Action: Add Note -->
         <ImageButton
             android:id="@+id/btnAddNote"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Add Quick Note"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_add" />
 
-        <!-- Editing Tools -->
+        <!-- Editing Tools (18dp icons in 32dp bounds, 8dp tool spacing) -->
         <ImageButton
             android:id="@+id/btnSelectAll"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Select All"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
-            android:src="@drawable/ic_select_all_rounded" />
+            android:src="@drawable/ic_select_all" />
 
         <ImageButton
             android:id="@+id/btnPaste"
@@ -97,7 +103,7 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Paste to New Note"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_paste" />
 
@@ -114,7 +120,7 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="Clear Notes"
             android:scaleType="fitCenter"
-            android:padding="5dp"
+            android:padding="7dp"
             android:tint="#000000"
             android:src="@drawable/ic_delete_sweep" />
     </LinearLayout>
@@ -122,7 +128,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#D1D5DB" />
+        android:background="@color/toolbar_divider_color" />
 
     <!-- Notes Container Area with Staggered Grid -->
     <FrameLayout

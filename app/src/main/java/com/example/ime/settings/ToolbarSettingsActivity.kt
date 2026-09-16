@@ -14,7 +14,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.R
+import helium314.keyboard.latin.R
 import com.example.ime.toolbar.ToolbarPreferences
 import com.example.ime.toolbar.ToolbarTool
 import java.util.Collections

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F8FAFC"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="← Back"
+            android:textColor="#0F172A"
+            android:background="#E2E8F0"
+            android:minHeight="44dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Backup &amp; Restore"
+            android:textColor="#0F172A"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginEnd="40dp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 1. Export VianBoard Backup -->
+            <LinearLayout
+                android:id="@+id/cardExportVian"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="📤"
+                    android:textSize="22sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Export VianBoard Backup"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#94A3B8"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <!-- 2. Import VianBoard Backup -->
+            <LinearLayout
+                android:id="@+id/cardImportVian"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="📥"
+                    android:textSize="22sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Import VianBoard Backup"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#94A3B8"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <!-- 3. Import HeliBoard Backup -->
+            <LinearLayout
+                android:id="@+id/cardImportHeliBoard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="🔄"
+                    android:textSize="22sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Import HeliBoard Backup"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#94A3B8"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

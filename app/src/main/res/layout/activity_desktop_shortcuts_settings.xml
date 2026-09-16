@@ -31,7 +31,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/desktop_shortcuts_settings_title"
+            android:text="Desktop Shortcuts"
             android:textColor="#0F172A"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -39,9 +39,53 @@
             android:layout_marginEnd="40dp" />
     </LinearLayout>
 
+    <!-- Search and Sort Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:background="#FFFFFF"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_search"
+            android:contentDescription="Search" />
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Search shortcuts..."
+            android:textSize="14sp"
+            android:textColor="#0F172A"
+            android:background="@null"
+            android:layout_marginStart="10dp"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/btnSort"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Sort: Default"
+            android:textSize="12sp"
+            android:textColor="#0F172A"
+            android:background="#E2E8F0"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp" />
+    </LinearLayout>
+
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:fillViewport="true">
 
         <LinearLayout
@@ -50,18 +94,67 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- 1. SELECTED (ACTIVE 7) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ACTION BUTTONS (PICK 5 TO 7)"
-                android:textColor="#94A3B8"
-                android:textSize="12sp"
+                android:text="SELECTED (MAX 7 BUTTONS: 3-2-2 - DRAG ≡ TO REARRANGE)"
+                android:textColor="#64748B"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvSelectedShortcuts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:background="#FFFFFF"
+                android:elevation="1dp"
+                android:layout_marginBottom="20dp" />
+
+            <!-- 2. RECENT SECTION -->
+            <LinearLayout
+                android:id="@+id/layoutRecentSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="RECENT SHORTCUTS"
+                    android:textColor="#64748B"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvRecentShortcuts"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:background="#FFFFFF"
+                    android:elevation="1dp" />
+            </LinearLayout>
+
+            <!-- 3. ALL SHORTCUTS LIST -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ALL SHORTCUTS"
+                android:textColor="#64748B"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08"
                 android:layout_marginBottom="8dp" />
 
             <LinearLayout
-                android:id="@+id/containerShortcuts"
+                android:id="@+id/containerAllShortcuts"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"

@@ -6,7 +6,7 @@
     android:background="#F8FAFC"
     android:fitsSystemWindows="true">
 
-    <!-- Header bar -->
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -31,7 +31,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/layout_customization_title"
+            android:text="Layout Customization"
             android:textColor="#0F172A"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -50,34 +50,27 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="LAYOUT &amp; VISUALS"
-                android:textColor="#94A3B8"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:layout_marginBottom="8dp" />
-
-            <!-- Sub-item 1: Appearance -->
+            <!-- 1. Comma Key Long-Press Customization -->
             <LinearLayout
-                android:id="@+id/cardAppearance"
+                android:id="@+id/cardCommaCustomization"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:text="🎨"
-                    android:textSize="22sp"
+                    android:text=","
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textColor="#0F172A"
                     android:gravity="center" />
 
                 <LinearLayout
@@ -90,15 +83,16 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/appearance_title"
+                        android:text="Comma Key Long-Press Popup"
                         android:textColor="#0F172A"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tvCommaSummary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/appearance_desc"
+                        android:text="Settings (fixed) + 4 slots chosen"
                         android:textColor="#64748B"
                         android:textSize="13sp"
                         android:layout_marginTop="2dp" />
@@ -109,10 +103,10 @@
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- Sub-item 2: Toolbar -->
+            <!-- 2. Toolbar Tools Configuration -->
             <LinearLayout
                 android:id="@+id/cardToolbar"
                 android:layout_width="match_parent"
@@ -120,17 +114,18 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="#FFFFFF"
-                android:padding="18dp"
+                android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:elevation="1dp"
                 android:layout_marginBottom="12dp">
 
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="🛠️"
-                    android:textSize="22sp"
-                    android:gravity="center" />
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="#0F172A"
+                    android:contentDescription="Toolbar configuration" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -142,7 +137,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/toolbar_settings_title"
+                        android:text="Toolbar Tools"
                         android:textColor="#0F172A"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -150,7 +145,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/toolbar_settings_desc"
+                        android:text="Configure chevron tools &amp; pinned tools"
                         android:textColor="#64748B"
                         android:textSize="13sp"
                         android:layout_marginTop="2dp" />
@@ -161,59 +156,7 @@
                     android:layout_height="wrap_content"
                     android:text="›"
                     android:textColor="#94A3B8"
-                    android:textSize="20sp" />
-            </LinearLayout>
-
-            <!-- Sub-item 3: Desktop Shortcuts -->
-            <LinearLayout
-                android:id="@+id/cardDesktopShortcuts"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="#FFFFFF"
-                android:padding="18dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="💻"
-                    android:textSize="22sp"
-                    android:gravity="center" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/desktop_shortcuts_settings_title"
-                        android:textColor="#0F172A"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/desktop_shortcuts_settings_desc"
-                        android:textColor="#64748B"
-                        android:textSize="13sp"
-                        android:layout_marginTop="2dp" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="›"
-                    android:textColor="#94A3B8"
-                    android:textSize="20sp" />
+                    android:textSize="22sp" />
             </LinearLayout>
 
         </LinearLayout>

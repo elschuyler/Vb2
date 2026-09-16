@@ -1,105 +1,185 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 The Android Open Source Project
+modified
+SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
+-->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.READ_USER_DICTIONARY" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <application
-        android:name=".VianApplication"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.MyApplication">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.MyApplication">
+    <application android:label="@string/english_ime_name"
+            android:name="helium314.keyboard.latin.App"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:allowBackup="true"
+            android:defaultToDeviceProtectedStorage="true"
+            android:directBootAware="true"
+            android:enableOnBackInvokedCallback="true"
+            android:localeConfig="@xml/locales_config"
+            tools:remove="android:appComponentFactory"
+            tools:targetApi="33">
+
+        <!-- Services -->
+        <service android:name="LatinIME"
+                android:label="@string/english_ime_name"
+                android:permission="android.permission.BIND_INPUT_METHOD"
+                android:directBootAware="true"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/method_dummy" />
+        </service>
+
+        <service android:name=".spellcheck.AndroidSpellCheckerService"
+                 android:label="@string/spell_checker_service_name"
+                 android:permission="android.permission.BIND_TEXT_SERVICE"
+                 android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.textservice.SpellCheckerService" />
+            </intent-filter>
+            <meta-data android:name="android.view.textservice.scs"
+                    android:resource="@xml/spellchecker" />
+        </service>
+
+        <!-- Activities -->
+        <activity android:name="helium314.keyboard.settings.SettingsActivity"
+                android:theme="@style/platformActivityTheme"
+                android:icon="@mipmap/ic_launcher"
+                android:windowSoftInputMode="adjustResize"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity
-            android:name="com.example.ime.settings.SettingsActivity"
-            android:exported="false"
-            android:label="Settings"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.settings.LayoutCustomizationActivity"
-            android:exported="false"
-            android:label="Layout Customization"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.settings.AppearanceSettingsActivity"
-            android:exported="false"
-            android:label="Appearance Settings"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.settings.ToolbarSettingsActivity"
-            android:exported="false"
-            android:label="Toolbar Settings"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.settings.DesktopShortcutsSettingsActivity"
-            android:exported="false"
-            android:label="Desktop Shortcuts Settings"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.settings.QuickNotesSettingsActivity"
-            android:exported="false"
-            android:label="Quick Notes Settings"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.logger.LogViewerActivity"
-            android:exported="false"
-            android:label="Log Keeper"
-            android:theme="@style/Theme.MyApplication" />
-
-        <activity
-            android:name="com.example.ime.quicknotes.QuickNoteEditActivity"
-            android:exported="false"
-            android:label="Quick Note"
-            android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
-            android:windowSoftInputMode="stateVisible|adjustResize" />
-
-        <service
-            android:name="com.example.ime.VianBoardService"
-            android:label="@string/ime_service_name"
-            android:permission="android.permission.BIND_INPUT_METHOD"
-            android:exported="true"
-            android:directBootAware="true">
+        <!-- separate activity that's used internally, only necessary in case the launcher icon is disabled on Android < 10 -->
+        <activity android:name="helium314.keyboard.settings.SettingsActivity2"
+            android:theme="@style/platformActivityTheme"
+            android:icon="@mipmap/ic_launcher"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true">
+            <!-- intent filter for opening .dict files -->
             <intent-filter>
-                <action android:name="android.view.InputMethod" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/octet-stream" android:scheme="content" android:host="*" android:pathPattern=".*\\.dict" />
             </intent-filter>
-            <meta-data
-                android:name="android.view.im"
-                android:resource="@xml/method" />
-        </service>
+        </activity>
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
+        <activity android:name=".spellcheck.SpellCheckerSettingsActivity"
+                android:theme="@style/platformActivityTheme"
+                android:label="@string/spell_checker_service_name"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="helium314.keyboard.keyboard.emoji.EmojiSearchActivity" android:exported="false"
+            android:theme="@style/TransparentActivityTheme" android:excludeFromRecents="true" android:noHistory="true"
+            android:windowSoftInputMode="adjustResize|stateAlwaysVisible" android:configChanges="orientation|screenSize"/>
+
+        <activity android:name="helium314.keyboard.latin.voice.VoicePermissionActivity"
             android:exported="false"
-            android:grantUriPermissions="true">
+            android:theme="@style/TransparentActivityTheme"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
+        <activity android:name="com.example.ime.voice.VoicePermissionActivity"
+            android:exported="false"
+            android:theme="@style/TransparentActivityTheme"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
+        <activity android:name="com.example.ime.settings.VoiceInputSettingsActivity"
+            android:theme="@style/platformActivityTheme"
+            android:label="Voice Input Settings"
+            android:exported="false" />
+
+        <activity android:name="helium314.keyboard.settings.LogKeeperActivity"
+            android:theme="@style/platformActivityTheme"
+            android:label="@string/log_keeper"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <!-- Broadcast receivers -->
+        <receiver android:name="SystemBroadcastReceiver"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.USER_INITIALIZE" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="DictionaryPackInstallBroadcastReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="helium314.keyboard.dictionarypack.aosp.UNKNOWN_CLIENT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- for pasting files from internal clipboard -->
+        <provider android:name="helium314.keyboard.latin.database.ClipboardContentProvider"
+            android:authorities="@string/clipboard_provider_authority"
+            android:enabled="true"
+            android:grantUriPermissions="true"
+            android:exported="false">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+                android:resource="@xml/clipboard_provider_path"/>
         </provider>
+
+        <!-- necessary for sending mail attachments, remove when data gathering phase is done (end of 2026 latest) -->
+        <provider android:name="helium314.keyboard.settings.screens.gesturedata.GestureFileProvider"
+            android:authorities="@string/gesture_data_provider_authority"
+            android:enabled="true"
+            android:grantUriPermissions="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/gesture_data_path"/>
+        </provider>
+
+        <!-- Isolated multi-process voice input service -->
+        <service
+            android:name="com.example.ime.voice.VoiceInputService"
+            android:process=":voice"
+            android:exported="false" />
+        <service
+            android:name=".latin.voice.VoiceInputService"
+            android:process=":voice"
+            android:exported="false" />
     </application>
 
+    <queries>
+        <!-- To detect other IMEs -->
+        <intent>
+            <!-- changed to * as it's supposed to help with finding other keyboard apps, see https://github.com/HeliBorg/HeliBoard/issues/1340 -->
+            <!--<action android:name="android.view.InputMethod" />-->
+            <action android:name="*" />
+        </intent>
+
+        <!-- To detect names of installed apps -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 </manifest>
