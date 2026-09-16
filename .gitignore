@@ -10,23 +10,17 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
-build/
-**/build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
 .env
 debug.keystore
-*.keystore
+debug.keystore.base64
 *.keystore.base64
 *.jks
+*.keystore
 *.p12
 *.apk
 *.aab
 .build-outputs/
-reference/
-Vianboardtryagain-main/
-# HeliBoard reference repository
-vianboard/
-/vianboard/

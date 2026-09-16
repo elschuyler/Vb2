@@ -1,8 +1,6 @@
 {
-  "name": "Remix Remix Remix Vian board",
-  "description": "Vian series",
+  "name": "VianBoard",
+  "description": "A privacy-conscious, customizable offline keyboard for Android based on AOSP / OpenBoard.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
