@@ -8,7 +8,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
-import com.example.R
+import helium314.keyboard.latin.R
 
 /**
  * Lightweight, compact on-demand popup anchored to cards in Clipboard and Quick Notes.

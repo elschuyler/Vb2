@@ -12,7 +12,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.example.R
+import helium314.keyboard.latin.R
 
 class LogViewerActivity : Activity() {
 

@@ -1,7 +1,7 @@
 package com.example.ime.emoji
 
 import android.content.Context
-import com.example.R
+import helium314.keyboard.latin.R
 import org.json.JSONArray
 
 data class EmojiCategory(
