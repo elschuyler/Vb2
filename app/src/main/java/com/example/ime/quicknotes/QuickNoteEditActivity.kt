@@ -8,7 +8,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import com.example.R
+import helium314.keyboard.latin.R
 
 /**
  * Translucent dialog Activity for adding or editing a Quick Note.

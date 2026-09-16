@@ -1,113 +1,91 @@
-import java.util.Properties
-
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.google.devtools.ksp)
+  alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.secrets)
 }
 
 android {
-  namespace = "com.example"
+  namespace = "helium314.keyboard.latin"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.example.dzenfe"
+    applicationId = "shura.vianboard"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 4100
+    versionName = "4.1-beta1"
+
+    resourceConfigurations += listOf("en", "fr")
+    ndk {
+      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
+    }
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
-  signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
-    }
-    create("debugConfig") {
-      val localProperties = Properties()
-      val localPropertiesFile = rootProject.file("local.properties")
-      if (localPropertiesFile.exists()) {
-        localPropertiesFile.inputStream().use { stream ->
-          localProperties.load(stream)
-        }
+  val keystorePath = System.getenv("DEBUG_KEYSTORE_PATH")
+  if (!keystorePath.isNullOrEmpty() && file(keystorePath).exists()) {
+    signingConfigs {
+      create("customDebug") {
+        storeFile = file(keystorePath)
+        storePassword = System.getenv("DEBUG_STORE_PASSWORD") ?: "android"
+        keyAlias = System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+        keyPassword = System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
       }
-
-      val debugStorePassword = System.getenv("DEBUG_STORE_PASSWORD")
-        ?: localProperties.getProperty("DEBUG_STORE_PASSWORD")
-      val debugKeyPassword = System.getenv("DEBUG_KEY_PASSWORD")
-        ?: localProperties.getProperty("DEBUG_KEY_PASSWORD")
-      val debugKeyAlias = System.getenv("DEBUG_KEY_ALIAS")
-        ?: localProperties.getProperty("DEBUG_KEY_ALIAS")
-        ?: "androiddebugkey"
-
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = debugStorePassword
-      keyAlias = debugKeyAlias
-      keyPassword = debugKeyPassword
     }
   }
 
   buildTypes {
     release {
-      isMinifyEnabled = true
-      isShrinkResources = true
+      isCrunchPngs = false
+      isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      val debugConfig = signingConfigs.getByName("debugConfig")
-      if (debugConfig.storePassword != null && debugConfig.keyPassword != null) {
-        signingConfig = debugConfig
+      val customDebug = signingConfigs.findByName("customDebug")
+      if (customDebug != null) {
+        signingConfig = customDebug
       }
     }
   }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    isCoreLibraryDesugaringEnabled = true
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
   }
   buildFeatures {
+    viewBinding = true
+    compose = true
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
-  packaging {
-    resources {
-      excludes += "/reference/**"
-      excludes += "/blueprint/**"
-      excludes += "/receipts/**"
-      excludes += "/**/*.md"
-    }
-  }
   dependenciesInfo {
     includeInApk = false
-    includeInBundle = true
+    includeInBundle = false
   }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
-  ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
-// Unused dependencies are commented out to optimize memory & APK size
 dependencies {
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.recyclerview)
-  implementation(libs.kotlinx.coroutines.android)
-  implementation(libs.kotlinx.coroutines.core)
-  testImplementation(libs.androidx.core)
-  testImplementation(libs.androidx.junit)
-  testImplementation(libs.junit)
-  testImplementation(libs.kotlinx.coroutines.test)
-  testImplementation(libs.robolectric)
-  androidTestImplementation(libs.androidx.espresso.core)
-  androidTestImplementation(libs.androidx.junit)
-  androidTestImplementation(libs.androidx.runner)
+  implementation(libs.androidx.autofill)
+  implementation(libs.androidx.viewpager2)
+  implementation(libs.kotlinx.serialization.json)
+  implementation(platform(libs.androidx.compose.bom))
+  implementation(libs.androidx.compose.material3)
+  implementation(libs.androidx.compose.ui)
+  implementation(libs.androidx.compose.ui.graphics)
+  implementation(libs.androidx.compose.ui.tooling.preview)
+  implementation(libs.androidx.navigation.compose)
+  implementation(libs.reorderable)
+  implementation(libs.colorpicker.compose)
+  debugImplementation(libs.androidx.compose.ui.tooling)
+  debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

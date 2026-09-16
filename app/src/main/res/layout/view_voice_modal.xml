@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/keyboard_canvas_background">
+
+    <!-- Top Status / Streaming Preview Row -->
+    <LinearLayout
+        android:id="@+id/llVoiceHeader"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:minHeight="54dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp">
+
+        <!-- Pulse Ring Animation Canvas -->
+        <com.example.ime.voice.VoicePulseView
+            android:id="@+id/voicePulseView"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="10dp" />
+
+        <!-- Streaming Preview / Status Text (Tap to Pause/Resume) -->
+        <TextView
+            android:id="@+id/tvVoiceStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/voice_status_listening"
+            android:textColor="#0F172A"
+            android:textSize="14sp" />
+
+        <!-- 3-Stage Gain Multiplier Pill Button (1x / 2x / 4x) -->
+        <TextView
+            android:id="@+id/tvGainPill"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:minWidth="44dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_voice_pill"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:text="1x"
+            android:textColor="#334155"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Settings Shortcut Button -->
+        <ImageButton
+            android:id="@+id/btnVoiceSettings"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Voice Settings"
+            android:scaleType="fitCenter"
+            android:padding="6dp"
+            android:tint="#000000"
+            android:src="@drawable/ic_settings" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/toolbar_divider_color" />
+
+    <!-- Unified 4-Button Modal Bottom Bar ([ABC] [Space] [Backspace] [Enter]) -->
+    <com.example.ime.modal.ModalBottomBarView
+        android:id="@+id/modalBottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
