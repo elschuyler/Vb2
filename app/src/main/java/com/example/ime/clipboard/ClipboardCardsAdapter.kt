@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
-import com.example.R
+import helium314.keyboard.latin.R
 
 class ClipboardCardsAdapter(
     private val storage: ClipboardStorage,
