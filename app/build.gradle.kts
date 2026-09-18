@@ -10,7 +10,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "shura.vianboard"
+    applicationId = "shura.vianboard.jektal"
     minSdk = 24
     targetSdk = 36
     versionCode = 4100
@@ -55,7 +55,7 @@ android {
     targetCompatibility = JavaVersion.VERSION_17
   }
   buildFeatures {
-    viewBinding = true
+    viewBinding = false
     compose = true
     buildConfig = true
   }
@@ -86,6 +86,7 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.reorderable)
   implementation(libs.colorpicker.compose)
+  testImplementation(libs.junit)
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

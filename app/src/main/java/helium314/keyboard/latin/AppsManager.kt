@@ -28,16 +28,16 @@ class AppsManager(val context: Context) : BroadcastReceiver() {
     }
 
     fun registerForUpdates(listener: AppsChangedListener) {
-        this.listener = listener
-        val packageFilter = IntentFilter()
-        packageFilter.addAction(Intent.ACTION_PACKAGE_ADDED)
-        packageFilter.addAction(Intent.ACTION_PACKAGE_REMOVED)
-        packageFilter.addDataScheme("package")
-        context.registerReceiver(this, packageFilter)
+        // Decommissioned: zero package monitoring, zero battery drain
+        this.listener = null
     }
 
     fun close() {
-        context.unregisterReceiver(this)
+        try {
+            context.unregisterReceiver(this)
+        } catch (_: IllegalArgumentException) {
+            // Receiver not registered
+        }
         listener = null
     }
 

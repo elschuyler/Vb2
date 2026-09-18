@@ -45,6 +45,9 @@ class VianKeyboardView @JvmOverloads constructor(
     var onAnchorLongClick: (() -> Unit)? = null
     var onCommaPopupSelected: ((String) -> Unit)? = null
     var onSymbolsLongClick: (() -> Unit)? = null
+    var onSuggestionClick: ((String, Int) -> Unit)? = null
+    var onSpaceLongClick: (() -> Unit)? = null
+    var onLayoutUpdated: ((List<KeyData>, Int, Int) -> Unit)? = null
 
     private val toolbarPrefs = ToolbarPreferences(context)
     private val iconCache = mutableMapOf<Int, Drawable>()
@@ -93,6 +96,10 @@ class VianKeyboardView @JvmOverloads constructor(
         typeface = Typeface.DEFAULT
     }
     private val toolbarTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT
+    }
+    private val suggestionBoldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT_BOLD
     }
@@ -207,6 +214,10 @@ class VianKeyboardView @JvmOverloads constructor(
             } else if (key.type == KeyType.ACTION_EXPAND) {
                 isLongPressTriggered = true
                 onAnchorLongClick?.invoke()
+            } else if (key.type == KeyType.SPACE) {
+                isLongPressTriggered = true
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onSpaceLongClick?.invoke()
             } else if (key.type == KeyType.TOOLBAR_TOOL) {
                 key.tool?.let { tool ->
                     isLongPressTriggered = true
@@ -307,6 +318,9 @@ class VianKeyboardView @JvmOverloads constructor(
         toolbarTextPaint.color = Color.BLACK
         toolbarTextPaint.textSize = 14.5f * density
 
+        suggestionBoldPaint.color = Color.BLACK
+        suggestionBoldPaint.textSize = 14.5f * density
+
         iconStrokePaint.color = theme.textColor
         iconStrokePaint.strokeWidth = 2.2f * density
 
@@ -360,6 +374,7 @@ class VianKeyboardView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         val density = resources.displayMetrics.density
         layout.buildLayout(w.toFloat(), h.toFloat(), theme, density, bottomNavInsetPx)
+        onLayoutUpdated?.invoke(layout.keys, w, h)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -472,8 +487,9 @@ class VianKeyboardView @JvmOverloads constructor(
                 } else if (key.type == KeyType.SUGGESTION) {
                     val bgPaint = if (key.isPressed) pressedKeyPaint else toolbarBackgroundPaint
                     canvas.drawRoundRect(key.bounds, 8f * density, 8f * density, bgPaint)
-                    val textY = key.bounds.centerY() - ((toolbarTextPaint.descent() + toolbarTextPaint.ascent()) / 2)
-                    canvas.drawText(key.label, key.bounds.centerX(), textY, toolbarTextPaint)
+                    val paintToUse = if (key.code == -201) suggestionBoldPaint else toolbarTextPaint
+                    val textY = key.bounds.centerY() - ((paintToUse.descent() + paintToUse.ascent()) / 2)
+                    canvas.drawText(key.label, key.bounds.centerX(), textY, paintToUse)
                 }
             }
         }
@@ -550,7 +566,12 @@ class VianKeyboardView @JvmOverloads constructor(
                         else -> actionTextPaint
                     }
 
-                    if (key.label.contains("\n")) {
+                    if (key.type == KeyType.SPACE) {
+                        if (key.label.isNotEmpty()) {
+                            val textY = key.bounds.centerY() - ((hintPaint.descent() + hintPaint.ascent()) / 2)
+                            canvas.drawText(key.label, key.bounds.centerX(), textY, hintPaint)
+                        }
+                    } else if (key.label.contains("\n")) {
                         val lines = key.label.split("\n")
                         val totalH = (lines.size * 12f * density)
                         var lineY = key.bounds.centerY() - (totalH / 2) + (8f * density)
@@ -780,7 +801,12 @@ class VianKeyboardView @JvmOverloads constructor(
             }
 
             KeyType.SUGGESTION -> {
-                onTextCommit?.invoke(key.label + " ")
+                val slotIndex = -(key.code + 200)
+                if (onSuggestionClick != null) {
+                    onSuggestionClick?.invoke(key.label, slotIndex)
+                } else {
+                    onTextCommit?.invoke(key.label + " ")
+                }
             }
 
             else -> {
@@ -934,5 +960,27 @@ class VianKeyboardView @JvmOverloads constructor(
         drawable.setBounds(left, top, right, bottom)
         drawable.setTint(tintColor)
         drawable.draw(canvas)
+    }
+
+    fun updateSuggestions(newSuggestions: List<String>) {
+        if (layout.suggestions != newSuggestions) {
+            layout.suggestions = newSuggestions
+            if (width > 0 && height > 0) {
+                val density = resources.displayMetrics.density
+                layout.buildLayout(width.toFloat(), height.toFloat(), theme, density, bottomNavInsetPx)
+            }
+            invalidate()
+        }
+    }
+
+    fun updateSpaceLabel(label: String) {
+        if (layout.spaceLabel != label) {
+            layout.spaceLabel = label
+            if (width > 0 && height > 0) {
+                val density = resources.displayMetrics.density
+                layout.buildLayout(width.toFloat(), height.toFloat(), theme, density, bottomNavInsetPx)
+            }
+            invalidate()
+        }
     }
 }

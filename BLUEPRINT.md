@@ -204,7 +204,14 @@ VianBoard is a fully customizable, privacy-conscious offline Android keyboard ap
     - Normal Keyboard Disguise Mode: visual illusion rendering the exact standard QWERTY keyboard layout without visual traces or lines; tactile haptic pulses on key crossing; discrete decoy icon (`📋`) on top-right for exit.
     - In-modal header mode toggle button (`[⌨ Disguise]` / `[☷ Grid Mode]`) enabling rapid switching between modes for testing.
   - Wired long-press on `?123` / `1234` toggle buttons in `VianKeyboardView.kt` and toolbar tool click in `VianBoardService.kt` to trigger the Security Vault pattern modal with single-modal lifecycle guarantee.
-  - Verified full build with `compile_applet` (`BUILD SUCCESSFUL`).
+- **2026-09-16**: Completed Option A (Clean Restoration of OG VianBoard Architecture & HeliBoard Separation):
+  - In strict accordance with the Credential Immunity Rule (Mandate 2) and Security Scan Protocol (Mandate 3), purged exposed debug keystore files from workspace root and configured CI-only secret injection.
+  - Moved legacy HeliBoard sources (`helium314/`, `com/android/`), tests, and heavy dictionary assets (`.dict` files) into root `/reference/`, removing bloat from active code while preserving full reference materials.
+  - Maintained all 54 active `com.example.*` classes in `app/src/main/java/com/example/`.
+  - Created `app/src/main/res/xml/method_vian.xml` and registered `com.example.ime.VianBoardService` as the system InputMethod in `AndroidManifest.xml`.
+  - Wired `MainActivity` to launch `SettingsActivity` directly, and registered all 10 VianBoard settings activities, dialogs, voice service, and file provider.
+  - Disabled `viewBinding` to prevent unnecessary stub generation, configured JUnit unit testing (`libs.junit`), and verified that all unit tests (`gradle :app:testDebugUnitTest`) and full build (`compile_applet`) pass cleanly.
+
 
 
 

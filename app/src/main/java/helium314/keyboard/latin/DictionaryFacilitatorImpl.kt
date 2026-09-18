@@ -141,10 +141,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         val subDictTypesToUse = listOfNotNull(
             Dictionary.TYPE_USER,
-            if (useAppsDict) Dictionary.TYPE_APPS else null,
-            if (usePersonalizedDicts) Dictionary.TYPE_USER_HISTORY else null,
-            if (useContactsDict && PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.READ_CONTACTS))
-                Dictionary.TYPE_CONTACTS else null
+            if (usePersonalizedDicts) Dictionary.TYPE_USER_HISTORY else null
         )
 
         val (newDictionaryGroups, existingDictsToCleanup) =
@@ -628,8 +625,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 return when (dictType) {
                     Dictionary.TYPE_USER_HISTORY -> UserHistoryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
                     Dictionary.TYPE_USER -> UserBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
-                    Dictionary.TYPE_CONTACTS -> ContactsBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
-                    Dictionary.TYPE_APPS -> AppsBinaryDictionary.getDictionary(context, locale, dictFile, dictNamePrefix)
+                    Dictionary.TYPE_CONTACTS, Dictionary.TYPE_APPS -> null // Decommissioned for zero-PII and zero battery drain
                     else -> throw IllegalArgumentException("unknown dictionary type $dictType")
                 }
             } catch (e: SecurityException) {

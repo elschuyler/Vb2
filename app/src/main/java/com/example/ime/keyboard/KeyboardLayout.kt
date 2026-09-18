@@ -24,6 +24,7 @@ class KeyboardLayout {
     val toolbarKeys = mutableListOf<KeyData>()
 
     var suggestions: List<String> = emptyList()
+    var spaceLabel: String = "EN"
 
     var isToolbarExpanded: Boolean = false
     var isIncognitoActive: Boolean = false
@@ -236,9 +237,9 @@ class KeyboardLayout {
             // COLLAPSED TOOLBAR: Suggestions in middle area
             if (suggestions.isNotEmpty()) {
                 val eachSugWidth = (middleAreaWidth - (spacing * (suggestions.size - 1))) / suggestions.size
-                for (sug in suggestions) {
+                for ((idx, sug) in suggestions.withIndex()) {
                     val sugKey = KeyData(
-                        code = -200,
+                        code = -200 - idx,
                         label = sug,
                         type = KeyType.SUGGESTION,
                         weight = 1f,
@@ -448,7 +449,7 @@ class KeyboardLayout {
                 type = KeyType.COMMA,
                 weight = 1.0f
             ),
-            KeyData(code = 32, label = "", hintLabel = null, type = KeyType.SPACE, weight = 4.6f),
+            KeyData(code = 32, label = spaceLabel, hintLabel = null, type = KeyType.SPACE, weight = 4.6f),
             KeyData(
                 code = '.'.code,
                 label = ".",

@@ -38,6 +38,7 @@ import com.example.ime.security.MasterPatternStore
 import com.example.ime.security.VaultSessionManager
 import com.example.ime.security.VaultType
 import com.example.ime.security.VianPatternUnlockView
+import com.example.ime.engine.TextEngineBridge
 import com.example.logger.LogKeeper
 
 class VianBoardService : InputMethodService() {
@@ -61,12 +62,17 @@ class VianBoardService : InputMethodService() {
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         capturePrimaryClip()
     }
+    private lateinit var textEngineBridge: TextEngineBridge
 
     override fun onCreate() {
         super.onCreate()
         LogKeeper.logComponentStart("VianBoardService")
         clipboardStorage = ClipboardStorage(this)
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        textEngineBridge = TextEngineBridge(this)
+        textEngineBridge.onSuggestionsUpdated = { suggestions, _ ->
+            keyboardView?.updateSuggestions(suggestions)
+        }
     }
 
     private fun capturePrimaryClip() {
@@ -130,6 +136,15 @@ class VianBoardService : InputMethodService() {
             onAnchorLongClick = { handleAnchorLongClick() }
             onCommaPopupSelected = { item -> handleCommaPopupAction(item) }
             onSymbolsLongClick = { showPatternUnlockModal(VaultType.SECURITY) }
+            onSuggestionClick = { candidate, slot ->
+                textEngineBridge.selectSuggestion(candidate, slot, currentInputConnection)
+            }
+            onSpaceLongClick = {
+                cycleLanguageMode()
+            }
+            onLayoutUpdated = { keys, w, h ->
+                textEngineBridge.updateKeyboardModel(keys, w, h)
+            }
         }
         container.addView(view)
         keyboardView = view
@@ -141,6 +156,12 @@ class VianBoardService : InputMethodService() {
         super.onStartInputView(info, restarting)
         LogKeeper.logEvent("IME", "onStartInputView (restarting=$restarting)")
         keyboardView?.reloadTheme()
+
+        textEngineBridge.onStartInput(info, restarting)
+        keyboardView?.updateSpaceLabel(textEngineBridge.currentMode.indicator)
+        if (textEngineBridge.isSensitiveInput(info)) {
+            keyboardView?.updateSuggestions(emptyList())
+        }
 
         // Auto-register clipboard listener and capture any current clip to storage
         try {
@@ -333,10 +354,16 @@ class VianBoardService : InputMethodService() {
         val ic = currentInputConnection ?: return
         when (key.type) {
             KeyType.CHARACTER -> {
-                ic.commitText(key.label, 1)
+                textEngineBridge.handleCharacter(
+                    key.label,
+                    key.bounds.centerX().toInt(),
+                    key.bounds.centerY().toInt(),
+                    ic,
+                    currentInputEditorInfo
+                )
             }
             KeyType.SPACE -> {
-                ic.commitText(" ", 1)
+                textEngineBridge.handleSpace(ic, currentInputEditorInfo)
             }
             KeyType.COMMA -> {
                 ic.commitText(",", 1)
@@ -345,7 +372,7 @@ class VianBoardService : InputMethodService() {
                 ic.commitText(".", 1)
             }
             KeyType.DELETE -> {
-                sendDelete()
+                textEngineBridge.handleDelete(ic, currentInputEditorInfo)
             }
             KeyType.ENTER -> {
                 sendEnter()
@@ -356,6 +383,17 @@ class VianBoardService : InputMethodService() {
                 }
             }
         }
+    }
+
+    private fun cycleLanguageMode() {
+        val nextMode = when (textEngineBridge.currentMode) {
+            TextEngineBridge.LanguageMode.ENGLISH -> TextEngineBridge.LanguageMode.FRENCH
+            TextEngineBridge.LanguageMode.FRENCH -> TextEngineBridge.LanguageMode.DUAL
+            TextEngineBridge.LanguageMode.DUAL -> TextEngineBridge.LanguageMode.ENGLISH
+        }
+        textEngineBridge.setLanguageMode(nextMode)
+        keyboardView?.updateSpaceLabel(nextMode.indicator)
+        Toast.makeText(this, nextMode.displayName, Toast.LENGTH_SHORT).show()
     }
 
     private fun sendDelete() {
@@ -955,7 +993,24 @@ class VianBoardService : InputMethodService() {
             // Ignore
         }
         dismissActiveModal()
+        textEngineBridge.onFinishInput(currentInputConnection)
+        keyboardView?.updateSpaceLabel(textEngineBridge.currentMode.indicator)
         super.onFinishInputView(finishingInput)
+    }
+
+    override fun onUpdateSelection(
+        oldSelStart: Int,
+        oldSelEnd: Int,
+        newSelStart: Int,
+        newSelEnd: Int,
+        candidatesStart: Int,
+        candidatesEnd: Int
+    ) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        if (candidatesStart < 0 && textEngineBridge.wordComposer.isComposingWord) {
+            textEngineBridge.wordComposer.reset()
+            textEngineBridge.clearSuggestions()
+        }
     }
 
     override fun onDestroy() {
@@ -966,6 +1021,7 @@ class VianBoardService : InputMethodService() {
             // Ignore
         }
         dismissActiveModal()
+        textEngineBridge.onDestroy()
         inputViewContainer = null
         keyboardView = null
         super.onDestroy()

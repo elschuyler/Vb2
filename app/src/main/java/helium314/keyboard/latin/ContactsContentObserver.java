@@ -41,26 +41,8 @@ public class ContactsContentObserver implements Runnable {
     }
 
     public void registerObserver(final ContactsChangedListener listener) {
-        if (!PermissionsUtil.checkAllPermissionsGranted(
-                mContext, Manifest.permission.READ_CONTACTS)) {
-            Log.i(TAG, "No permission to read contacts. Not registering the observer.");
-            // do nothing if we do not have the permission to read contacts.
-            return;
-        }
-
-        if (DebugFlags.DEBUG_ENABLED) {
-            Log.d(TAG, "registerObserver()");
-        }
-        mContactsChangedListener = listener;
-        mContentObserver = new ContentObserver(null /* handler */) {
-            @Override
-            public void onChange(boolean self) {
-                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD)
-                        .execute(ContactsContentObserver.this);
-            }
-        };
-        final ContentResolver contentResolver = mContext.getContentResolver();
-        contentResolver.registerContentObserver(Contacts.CONTENT_URI, true, mContentObserver);
+        // Decommissioned: zero-PII guarantee, no background contacts monitoring
+        Log.i(TAG, "ContactsContentObserver is permanently decommissioned.");
     }
 
     @Override

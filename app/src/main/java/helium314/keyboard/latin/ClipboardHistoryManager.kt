@@ -17,6 +17,8 @@ import android.view.inputmethod.EditorInfo
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import android.widget.ImageView
+import android.widget.TextView
 import helium314.keyboard.keyboard.KeyboardTypeface
 import helium314.keyboard.compat.ClipboardManagerCompat
 import helium314.keyboard.event.Event
@@ -27,7 +29,6 @@ import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.isValidNumber
 import helium314.keyboard.latin.database.ClipboardDao
-import helium314.keyboard.latin.databinding.ClipboardSuggestionBinding
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.InputTypeUtils
@@ -188,8 +189,8 @@ class ClipboardHistoryManager(
         val content = clipItem.coerceToText(latinIME)
 
         // create the view
-        val binding = ClipboardSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
-        val textView = binding.clipboardSuggestionText
+        val view = LayoutInflater.from(latinIME).inflate(R.layout.clipboard_suggestion, parent, false)
+        val textView = view.findViewById<TextView>(R.id.clipboard_suggestion_text)
         val clipIcon = KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
         clipIcon?.setBounds(0, 0, textView.lineHeight, textView.lineHeight) // scale the icon to the text
         textView.setCompoundDrawablesRelative(clipIcon, null, null, null)
@@ -206,13 +207,13 @@ class ClipboardHistoryManager(
             else latinIME.onEvent(Event.createSoftwareKeypressEvent(KeyCode.CLIPBOARD_PASTE, 0,
                 Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false))
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
-            binding.root.isGone = true
+            view.isGone = true
         }
         textView.setOnClickListener(onClickListener)
 
         if (hasImage) {
             if (InputTypeUtils.isNumberInputType(inputType)) return null
-            val imageView = binding.clipboardSuggestionImage
+            val imageView = view.findViewById<ImageView>(R.id.clipboard_suggestion_image)
             imageView.isVisible = true
             try {
                 imageView.setImageURI(clipItem.uri)
@@ -223,7 +224,7 @@ class ClipboardHistoryManager(
             imageView.setOnClickListener(onClickListener)
         }
 
-        val closeButton = binding.clipboardSuggestionClose
+        val closeButton = view.findViewById<ImageView>(R.id.clipboard_suggestion_close)
         closeButton.setImageDrawable(KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.layoutParams.width = textView.lineHeight // scale the icon to the text
         closeButton.layoutParams.height = textView.lineHeight
@@ -233,9 +234,9 @@ class ClipboardHistoryManager(
         textView.setTextColor(colors.get(ColorType.KEY_TEXT))
         clipIcon?.let { colors.setColor(it, ColorType.CLIPBOARD_SUGGESTION_ICON) }
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
-        colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
+        colors.setBackground(view, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
 
-        clipboardSuggestionView = binding.root
+        clipboardSuggestionView = view
         return clipboardSuggestionView
     }
 

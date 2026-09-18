@@ -24,3 +24,5 @@ debug.keystore.base64
 *.apk
 *.aab
 .build-outputs/
+reference/
+vianboard/

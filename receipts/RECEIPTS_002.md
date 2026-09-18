@@ -66,3 +66,32 @@
 - **Deviation from requested**: None. Followed all specifications from Phase 1 of `SECURITY_VAULT_PLAN.md`.
 - **Known issue or follow-up needed**: Ready for Phase 2 (Privacy Vault Engine & Masked Suggestion Pills).
 
+### [2026-09-16T00:26:00-07:00] - Option A: Full Restoration of OG VianBoard Architecture & HeliBoard Separation
+- **Summary**: Purged committed credentials, separated HeliBoard source and heavy assets into `/reference/`, wired `VianBoardService` as the primary IME in `AndroidManifest.xml` and `method_vian.xml`, disabled unused `viewBinding`, added JUnit test configuration, and routed `MainActivity` to `SettingsActivity`.
+- **Exact files touched**:
+  - `/debug.keystore` & `/debug.keystore.base64` (Purged from workspace root)
+  - `/.gitignore` (Added `reference/` and `vianboard/`)
+  - `app/build.gradle.kts` (Disabled `viewBinding = false`, added `testImplementation(libs.junit)`)
+  - `app/src/main/res/xml/method_vian.xml` (Created with VianBoard IME metadata pointing to `SettingsActivity`)
+  - `app/src/main/AndroidManifest.xml` (Restored clean Vian IME registration, main launcher routing, 10 settings activities, voice service, log provider)
+  - `app/src/main/java/MainActivity.kt` (Configured to route directly to `SettingsActivity`)
+  - `/reference/heliboard/` (Moved legacy `helium314/` and `com/android/` HeliBoard sources)
+  - `/reference/dicts/` (Moved ~4MB dictionary files)
+  - `/reference/layouts/` & `/reference/locale_key_texts/` (Moved HeliBoard layout assets)
+  - `/reference/test/` (Moved HeliBoard and legacy template tests)
+  - `/receipts/RECEIPTS_002.md` (Appended audit entry)
+- **What was actually done**:
+  1. Purged exposed keystore credentials in strict compliance with the Credential Immunity Rule (Mandate 2) and Security Scan Protocol (Mandate 3).
+  2. Moved HeliBoard code (`helium314/`, `com/android/`) and heavy dictionary assets (`.dict` files) into `/reference/`, reducing source bloat while preserving all reference code.
+  3. Kept all 54 active `com.example.*` classes untouched and isolated in `app/src/main/java/com/example/`.
+  4. Created `app/src/main/res/xml/method_vian.xml` and registered `com.example.ime.VianBoardService` as the system InputMethod in `AndroidManifest.xml`.
+  5. Disabled unused `viewBinding` in `app/build.gradle.kts` to eliminate Java stub generation for legacy layout files.
+  6. Verified that `gradle :app:testDebugUnitTest` passes and `compile_applet` succeeds without errors.
+- **How it was verified**:
+  - `compile_applet`: Build succeeded cleanly (`BUILD SUCCESSFUL`).
+  - `gradle :app:testDebugUnitTest`: Passed all unit tests in 15s.
+  - APK verification: Inspected `app-debug.apk` to confirm all 54 `com.example.*` classes are present, zero `.dict` assets or HeliBoard native libs packaged.
+- **Deviation from requested**: None. Followed Option A specifications exactly as finalized in the discussion.
+- **Known issue or follow-up needed**: The clean OG VianBoard foundation is restored. Next step is proceeding with planned feature work (such as Security Vault Phase 2 or voice engine).
+
+
