@@ -22,8 +22,7 @@
         <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
     <style name="KeyboardView">
-        <!-- This keyBackground is needed to run unit tests based on {@link InputTestBase}. -> todo: so it can be removed? -->
-        <item name="keyBackground">@drawable/btn_keyboard_key_holo_white</item>
+        <item name="keyBackground">@drawable/btn_keyboard_key_lxx_base</item>
         <item name="keyTypeface">normal</item>
         <!-- A negative value to disable key text shadow layer. -->
         <item name="keyTextShadowRadius">-1.0</item>

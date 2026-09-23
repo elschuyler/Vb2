@@ -10,7 +10,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.keyboard.KeyboardTheme
 
 /**

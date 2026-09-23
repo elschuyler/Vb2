@@ -203,7 +203,45 @@
                     android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- 5. Advanced (Log Keeper & Backup/Restore) -->
+            <!-- 5. Text Engine (Safeguards & Performance) -->
+            <LinearLayout
+                android:id="@+id/cardTextEngine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_dictionary"
+                    android:contentDescription="Text Engine" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Text Engine"
+                    android:textColor="#0F172A"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#94A3B8"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <!-- 6. Advanced (Log Keeper & Backup/Restore) -->
             <LinearLayout
                 android:id="@+id/cardAdvanced"
                 android:layout_width="match_parent"

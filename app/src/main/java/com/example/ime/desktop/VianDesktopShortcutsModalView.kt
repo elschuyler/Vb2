@@ -8,7 +8,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.RelativeLayout
 import android.widget.TextView
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.modal.ModalBottomBarView
 import com.example.ime.settings.DesktopShortcutsStorage
 

@@ -41,11 +41,11 @@ jobs:
         run: |
           NDK_DIR=$(find $ANDROID_HOME/ndk -maxdepth 1 -mindepth 1 2>/dev/null | sort -V | tail -n 1)
           if [ -n "$NDK_DIR" ] && [ -f "$NDK_DIR/ndk-build" ]; then
-            echo "Compiling libjni_latinime.so using NDK at $NDK_DIR..."
-            $NDK_DIR/ndk-build -C app/src/main/jni NDK_APPLICATION_MK=Application.mk NDK_LIBS_OUT=$GITHUB_WORKSPACE/app/src/main/jniLibs APP_ABI="armeabi-v7a arm64-v8a x86_64"
+            echo "Compiling libjni_latinime.so for ARM (arm64-v8a, armeabi-v7a)..."
+            $NDK_DIR/ndk-build -C app/src/main/jni NDK_APPLICATION_MK=Application.mk NDK_LIBS_OUT=$GITHUB_WORKSPACE/app/src/main/jniLibs APP_ABI="armeabi-v7a arm64-v8a"
           elif command -v ndk-build &> /dev/null; then
             echo "Compiling libjni_latinime.so using ndk-build in PATH..."
-            ndk-build -C app/src/main/jni NDK_APPLICATION_MK=Application.mk NDK_LIBS_OUT=$GITHUB_WORKSPACE/app/src/main/jniLibs APP_ABI="armeabi-v7a arm64-v8a x86_64"
+            ndk-build -C app/src/main/jni NDK_APPLICATION_MK=Application.mk NDK_LIBS_OUT=$GITHUB_WORKSPACE/app/src/main/jniLibs APP_ABI="armeabi-v7a arm64-v8a"
           else
             echo "NDK not present in environment; skipping native pre-build"
           fi
@@ -54,8 +54,8 @@ jobs:
         run: |
           NDK_DIR=$(find $ANDROID_HOME/ndk -maxdepth 1 -mindepth 1 2>/dev/null | sort -V | tail -n 1)
           if [ -n "$NDK_DIR" ] && [ -f "$NDK_DIR/build/cmake/android.toolchain.cmake" ]; then
-            echo "Compiling libwhisper.so using CMake and NDK at $NDK_DIR..."
-            for ABI in armeabi-v7a arm64-v8a x86_64; do
+            echo "Compiling libwhisper.so using CMake for ARM (arm64-v8a, armeabi-v7a)..."
+            for ABI in armeabi-v7a arm64-v8a; do
               mkdir -p app/src/main/jniLibs/$ABI
               cmake -B /tmp/build-whisper-$ABI \
                 -S app/src/main/jni/whisper \

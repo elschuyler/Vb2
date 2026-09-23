@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.keyboard.KeyboardTheme
 import com.example.ime.keyboard.VianKeyboardView
 

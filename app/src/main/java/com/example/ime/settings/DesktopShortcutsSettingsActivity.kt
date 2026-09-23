@@ -9,7 +9,7 @@ import android.widget.*
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import helium314.keyboard.latin.R
+import com.example.R
 import java.util.Collections
 
 class DesktopShortcutsSettingsActivity : Activity() {

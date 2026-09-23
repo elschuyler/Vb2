@@ -1,6 +1,6 @@
 package com.example.ime.toolbar
 
-import helium314.keyboard.latin.R
+import com.example.R
 
 enum class ToolbarTool(
     val id: String,

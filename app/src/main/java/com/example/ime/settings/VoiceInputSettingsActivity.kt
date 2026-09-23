@@ -13,9 +13,10 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import com.example.ime.voice.VoiceModelManager
+import com.example.ime.voice.VoiceSettingsPreferences
 import com.example.ime.voice.WordReplacement
 import com.example.ime.voice.WordReplacementStore
-import helium314.keyboard.latin.R
+import com.example.R
 import java.util.Locale
 
 /**
@@ -39,6 +40,14 @@ class VoiceInputSettingsActivity : Activity() {
     private lateinit var sbTemperature: SeekBar
     private lateinit var tvTemperatureValue: TextView
 
+    private lateinit var switchSuppressAnnotations: android.widget.Switch
+    private lateinit var switchVerboseMode: android.widget.Switch
+    private lateinit var switchBeamSearch: android.widget.Switch
+    private lateinit var switchUndertrainedLanguages: android.widget.Switch
+    private lateinit var rowOpenImeSettings: View
+    private lateinit var switchLegacy30sLimit: android.widget.Switch
+    private lateinit var switchHapticFeedback: android.widget.Switch
+
     private lateinit var btnAddReplacement: Button
     private lateinit var containerReplacements: LinearLayout
     private lateinit var tvEmptyReplacements: TextView
@@ -51,6 +60,7 @@ class VoiceInputSettingsActivity : Activity() {
 
         initModelViews()
         initTemperatureViews()
+        initAdvancedSettingsViews()
         initWordReplacementViews()
     }
 
@@ -124,6 +134,57 @@ class VoiceInputSettingsActivity : Activity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+    }
+
+    private fun initAdvancedSettingsViews() {
+        switchSuppressAnnotations = findViewById(R.id.switchSuppressAnnotations)
+        switchVerboseMode = findViewById(R.id.switchVerboseMode)
+        switchBeamSearch = findViewById(R.id.switchBeamSearch)
+        switchUndertrainedLanguages = findViewById(R.id.switchUndertrainedLanguages)
+        rowOpenImeSettings = findViewById(R.id.rowOpenImeSettings)
+        switchLegacy30sLimit = findViewById(R.id.switchLegacy30sLimit)
+        switchHapticFeedback = findViewById(R.id.switchHapticFeedback)
+
+        switchSuppressAnnotations.isChecked = VoiceSettingsPreferences.isSuppressNonSpeechEnabled(this)
+        switchSuppressAnnotations.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setSuppressNonSpeechEnabled(this, isChecked)
+        }
+
+        switchVerboseMode.isChecked = VoiceSettingsPreferences.isVerboseModeEnabled(this)
+        switchVerboseMode.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setVerboseModeEnabled(this, isChecked)
+        }
+
+        switchBeamSearch.isChecked = VoiceSettingsPreferences.isUseBeamSearchEnabled(this)
+        switchBeamSearch.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setUseBeamSearchEnabled(this, isChecked)
+        }
+
+        switchUndertrainedLanguages.isChecked = VoiceSettingsPreferences.isAllowUndertrainedLanguagesEnabled(this)
+        switchUndertrainedLanguages.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setAllowUndertrainedLanguagesEnabled(this, isChecked)
+        }
+
+        rowOpenImeSettings.setOnClickListener {
+            try {
+                val intent = Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Could not open system IME settings", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        switchLegacy30sLimit.isChecked = VoiceSettingsPreferences.isLegacy30sLimitEnabled(this)
+        switchLegacy30sLimit.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setLegacy30sLimitEnabled(this, isChecked)
+        }
+
+        switchHapticFeedback.isChecked = VoiceSettingsPreferences.isHapticFeedbackEnabled(this)
+        switchHapticFeedback.setOnCheckedChangeListener { _, isChecked ->
+            VoiceSettingsPreferences.setHapticFeedbackEnabled(this, isChecked)
+        }
     }
 
     private fun initWordReplacementViews() {

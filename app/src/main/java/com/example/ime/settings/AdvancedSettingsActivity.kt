@@ -5,7 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.logger.LogViewerActivity
 
 class AdvancedSettingsActivity : Activity() {

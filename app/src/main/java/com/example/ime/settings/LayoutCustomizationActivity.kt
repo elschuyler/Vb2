@@ -8,7 +8,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import helium314.keyboard.latin.R
+import com.example.R
 
 class LayoutCustomizationActivity : Activity() {
 

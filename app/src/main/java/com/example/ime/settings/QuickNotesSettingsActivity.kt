@@ -6,7 +6,7 @@ import android.widget.Button
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Toast
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.quicknotes.QuickNotesStorage
 
 /**

@@ -10,7 +10,7 @@ import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.modal.ModalBottomBarView
 
 class VianEmojiModalView @JvmOverloads constructor(

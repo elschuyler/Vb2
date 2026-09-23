@@ -36,5 +36,6 @@ class VianApplication : Application() {
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         LogKeeper.logEvent("MemoryTrim", "Trim level: $level")
+        com.example.ime.engine.TextEngineBridge.activeInstance?.onTrimMemory(level)
     }
 }

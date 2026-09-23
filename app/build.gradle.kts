@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-  namespace = "helium314.keyboard.latin"
+  namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
@@ -18,7 +18,7 @@ android {
 
     resourceConfigurations += listOf("en", "fr")
     ndk {
-      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
+      abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
     }
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -39,7 +39,8 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
     debug {
@@ -83,9 +84,9 @@ dependencies {
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
-  implementation(libs.androidx.navigation.compose)
-  implementation(libs.reorderable)
-  implementation(libs.colorpicker.compose)
+  // implementation(libs.androidx.navigation.compose)
+  // implementation(libs.reorderable)
+  // implementation(libs.colorpicker.compose)
   testImplementation(libs.junit)
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)

@@ -8,10 +8,10 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.example.logger.LogKeeper
-import helium314.keyboard.latin.R
-import helium314.keyboard.latin.common.FileUtils
-import helium314.keyboard.latin.utils.DeviceProtectedUtils
+import com.example.R
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.zip.ZipInputStream
 
 class BackupRestoreSettingsActivity : Activity() {
@@ -73,13 +73,20 @@ class BackupRestoreSettingsActivity : Activity() {
     }
 
     /**
-     * Selectively extracts ONLY personal dictionaries (user.dict) and custom language (.dict) binary dictionaries
-     * from a HeliBoard backup archive. All layouts, preferences, and system settings are strictly ignored.
+     * Selectively extracts ONLY personal dictionaries (user.dict), user history (history_*.dict),
+     * custom language binary dictionaries (.dict), and text wordlists from a HeliBoard backup archive.
+     * All layouts, preferences, theme XMLs, and system settings are strictly ignored.
      */
     private fun importHeliBoardSelectiveBackup(uri: Uri) {
         Thread {
             var importedDictCount = 0
-            val targetBaseDir = DeviceProtectedUtils.getFilesDir(this)
+            val targetBaseDir = (if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                createDeviceProtectedStorageContext().filesDir
+            } else {
+                filesDir
+            }) ?: filesDir
+
+            val canonicalBase = targetBaseDir.canonicalFile
 
             try {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -87,33 +94,74 @@ class BackupRestoreSettingsActivity : Activity() {
                         var entry = zip.nextEntry
                         while (entry != null) {
                             val name = entry.name
-                            // Match:
-                            // 1. "dicts/...user.dict" or any ".*user\.dict" (Personal dictionary)
-                            // 2. Custom or main binary dictionaries ending with ".dict"
-                            val isUserDict = name.endsWith("user.dict") || name.contains("user.dict")
-                            val isCustomDict = name.endsWith(".dict") && !name.contains("..")
+                            val fileName = File(name).name
 
-                            if (isUserDict || isCustomDict) {
-                                val cleanName = if (name.startsWith("unprotected/")) {
-                                    name.substringAfter("unprotected/")
-                                } else {
-                                    name
+                            val isDictBinary = name.endsWith(".dict", ignoreCase = true)
+                            val isTextWordlist = (name.endsWith(".txt", ignoreCase = true) ||
+                                    name.endsWith(".tsv", ignoreCase = true) ||
+                                    name.endsWith(".csv", ignoreCase = true)) &&
+                                    (name.contains("user", ignoreCase = true) ||
+                                            name.contains("dict", ignoreCase = true) ||
+                                            name.contains("word", ignoreCase = true))
+
+                            if (isDictBinary && !name.contains("..")) {
+                                val isUserDict = fileName.contains("user", ignoreCase = true)
+                                val isHistoryDict = fileName.contains("history", ignoreCase = true)
+
+                                val targetFile = when {
+                                    isUserDict -> File(File(targetBaseDir, "user_dicts"), fileName)
+                                    isHistoryDict -> File(File(targetBaseDir, "user_history"), fileName)
+                                    else -> File(File(targetBaseDir, "dicts"), fileName)
                                 }
-                                val targetFile = File(targetBaseDir, cleanName)
-                                val canonicalBase = targetBaseDir.canonicalFile
-                                val canonicalTarget = targetFile.canonicalFile
 
-                                // Path traversal safety check
+                                val canonicalTarget = targetFile.canonicalFile
                                 if (canonicalTarget.path.startsWith(canonicalBase.path + File.separator)) {
                                     targetFile.parentFile?.mkdirs()
-                                    FileUtils.copyStreamToNewFile(zip, targetFile)
+                                    FileOutputStream(targetFile).use { out ->
+                                        zip.copyTo(out)
+                                    }
                                     importedDictCount++
-                                    LogKeeper.logEvent("BackupRestore", "Imported dictionary file: $cleanName")
+                                    LogKeeper.logEvent("BackupRestore", "Imported binary dictionary: ${targetFile.relativeTo(targetBaseDir).path}")
+
+                                    // If this is a generic user.dict, also mirror it to base filesDir/user.dict
+                                    if (isUserDict && (fileName == "user.dict" || fileName.endsWith("user.dict"))) {
+                                        try {
+                                            targetFile.copyTo(File(targetBaseDir, "user.dict"), overwrite = true)
+                                        } catch (_: Exception) {}
+                                    }
+                                }
+                            } else if (isTextWordlist && !name.contains("..")) {
+                                // Extract and append text wordlist into user_dicts/imported_words.txt
+                                val userDictDir = File(targetBaseDir, "user_dicts")
+                                userDictDir.mkdirs()
+                                val importedWordsFile = File(userDictDir, "imported_words.txt")
+                                val canonicalTarget = importedWordsFile.canonicalFile
+
+                                if (canonicalTarget.path.startsWith(canonicalBase.path + File.separator)) {
+                                    FileOutputStream(importedWordsFile, true).use { out ->
+                                        zip.copyTo(out)
+                                        out.write("\n".toByteArray())
+                                    }
+                                    importedDictCount++
+                                    LogKeeper.logEvent("BackupRestore", "Imported text wordlist into: ${importedWordsFile.name}")
                                 }
                             }
+
                             zip.closeEntry()
                             entry = zip.nextEntry
                         }
+                    }
+                }
+
+                // If dictionaries were imported, signal TextEngineBridge to immediately reload
+                if (importedDictCount > 0) {
+                    try {
+                        com.example.ime.VianBoardService.activeInstance?.engineBridge?.reloadDictionaries()
+                        val reloadIntent = Intent(com.example.ime.VianBoardService.ACTION_RELOAD_DICTIONARIES)
+                        sendBroadcast(reloadIntent)
+                        LogKeeper.logEvent("BackupRestore", "Signaled VianBoardService to reload dictionaries")
+                    } catch (t: Throwable) {
+                        LogKeeper.logWarning("BackupRestore", "Could not trigger reloadDictionaries directly: ${t.message}")
                     }
                 }
 
@@ -121,14 +169,14 @@ class BackupRestoreSettingsActivity : Activity() {
                     if (importedDictCount > 0) {
                         Toast.makeText(
                             this,
-                            "Successfully imported $importedDictCount dictionary file(s) from HeliBoard backup",
+                            "Successfully imported $importedDictCount dictionary item(s) from HeliBoard backup",
                             Toast.LENGTH_LONG
                         ).show()
-                        LogKeeper.logEvent("BackupRestore", "HeliBoard selective import completed: $importedDictCount files")
+                        LogKeeper.logEvent("BackupRestore", "HeliBoard selective import completed: $importedDictCount items")
                     } else {
                         Toast.makeText(
                             this,
-                            "No dictionary (.dict or user.dict) files found in selected archive",
+                            "No dictionary (.dict or user wordlists) found in selected archive",
                             Toast.LENGTH_LONG
                         ).show()
                     }

@@ -7,7 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
-import helium314.keyboard.latin.R
+import com.example.R
 
 class QuickNotesCardsAdapter(
     private val storage: QuickNotesStorage,

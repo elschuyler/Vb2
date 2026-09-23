@@ -12,13 +12,21 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import helium314.keyboard.latin.R
+import com.example.R
 
 class LogViewerActivity : Activity() {
 
     private lateinit var tvMemoryStats: TextView
     private lateinit var tvLogContent: TextView
     private lateinit var swMasterLogger: Switch
+    private var activeFilter: String? = null // null means ALL
+
+    private lateinit var chipAll: Button
+    private lateinit var chipJni: Button
+    private lateinit var chipDict: Button
+    private lateinit var chipEngine: Button
+    private lateinit var chipIme: Button
+    private lateinit var chipError: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +36,13 @@ class LogViewerActivity : Activity() {
         tvLogContent = findViewById(R.id.tvLogContent)
         swMasterLogger = findViewById(R.id.swMasterLogger)
 
+        chipAll = findViewById(R.id.chipAll)
+        chipJni = findViewById(R.id.chipJni)
+        chipDict = findViewById(R.id.chipDict)
+        chipEngine = findViewById(R.id.chipEngine)
+        chipIme = findViewById(R.id.chipIme)
+        chipError = findViewById(R.id.chipError)
+
         findViewById<Button>(R.id.btnBack).setOnClickListener { finish() }
 
         swMasterLogger.isChecked = LogKeeper.isEnabled
@@ -35,6 +50,13 @@ class LogViewerActivity : Activity() {
             LogKeeper.setMasterSwitch(isChecked)
             refreshLogs()
         }
+
+        chipAll.setOnClickListener { selectFilter(null) }
+        chipJni.setOnClickListener { selectFilter(LogTags.JNI) }
+        chipDict.setOnClickListener { selectFilter(LogTags.DICT) }
+        chipEngine.setOnClickListener { selectFilter(LogTags.ENGINE) }
+        chipIme.setOnClickListener { selectFilter(LogTags.IME) }
+        chipError.setOnClickListener { selectFilter(LogTags.ERROR) }
 
         findViewById<Button>(R.id.btnCopyLogs).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -76,21 +98,52 @@ class LogViewerActivity : Activity() {
             }
         }
 
+        updateChipStyles()
         refreshLogs()
+    }
+
+    private fun selectFilter(filter: String?) {
+        activeFilter = filter
+        updateChipStyles()
+        refreshLogs()
+    }
+
+    private fun updateChipStyles() {
+        fun setStyle(button: Button, selected: Boolean) {
+            if (selected) {
+                button.setTextColor(android.graphics.Color.WHITE)
+                button.setBackgroundColor(android.graphics.Color.parseColor("#0284C7"))
+            } else {
+                button.setTextColor(android.graphics.Color.parseColor("#0F172A"))
+                button.setBackgroundColor(android.graphics.Color.parseColor("#E2E8F0"))
+            }
+        }
+        setStyle(chipAll, activeFilter == null)
+        setStyle(chipJni, activeFilter == LogTags.JNI)
+        setStyle(chipDict, activeFilter == LogTags.DICT)
+        setStyle(chipEngine, activeFilter == LogTags.ENGINE)
+        setStyle(chipIme, activeFilter == LogTags.IME)
+        setStyle(chipError, activeFilter == LogTags.ERROR)
     }
 
     private fun refreshLogs() {
         tvMemoryStats.text = "Heap: ${LogKeeper.getMemorySnapshotMb()} MB / Max: ${LogKeeper.getMaxMemoryMb()} MB"
 
-        val logs = LogKeeper.getLogs()
+        val allLogs = LogKeeper.getLogs()
+        val logs = if (activeFilter == null) {
+            allLogs
+        } else {
+            allLogs.filter { it.tag.contains(activeFilter!!, ignoreCase = true) || (activeFilter == LogTags.ERROR && it.level == LogLevel.ERROR) }
+        }
+
         if (logs.isEmpty()) {
-            tvLogContent.text = "No logs recorded."
+            tvLogContent.text = if (activeFilter == null) "No logs recorded." else "No logs for category [$activeFilter]."
             return
         }
 
         val sb = StringBuilder()
         for (log in logs) {
-            sb.append("[${log.timestamp}] [${log.level}] (${log.memoryUsageMb} MB) ${log.message}\n")
+            sb.append("[${log.timestamp}] [${log.level}] [${log.tag}] (${log.memoryUsageMb} MB) ${log.message}\n")
         }
         tvLogContent.text = sb.toString()
     }

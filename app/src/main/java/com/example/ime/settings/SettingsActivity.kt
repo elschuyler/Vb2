@@ -5,7 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
-import helium314.keyboard.latin.R
+import com.example.R
 
 class SettingsActivity : Activity() {
 
@@ -35,7 +35,12 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, SecurityVaultSettingsActivity::class.java))
         }
 
-        // 5. Advanced (Log Keeper & Backup/Restore)
+        // 5. Text Engine (Safeguards & Performance)
+        findViewById<LinearLayout>(R.id.cardTextEngine).setOnClickListener {
+            startActivity(Intent(this, TextEngineSettingsActivity::class.java))
+        }
+
+        // 6. Advanced (Log Keeper & Backup/Restore)
         findViewById<LinearLayout>(R.id.cardAdvanced).setOnClickListener {
             startActivity(Intent(this, AdvancedSettingsActivity::class.java))
         }

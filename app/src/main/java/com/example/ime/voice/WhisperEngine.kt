@@ -33,14 +33,20 @@ class WhisperEngine {
 
         /**
          * Strips common Whisper hallucination artifacts and control tokens.
+         * If suppressNonSpeech is enabled, removes [cough], [music], etc.
          */
-        fun cleanWhisperOutput(raw: String): String {
-            return raw
-                .replace(Regex("<\\|.*?\\|>"), "")
-                .replace("[BLANK_AUDIO]", "")
-                .replace("[MUSIC]", "")
-                .replace("[APPLAUSE]", "")
-                .trim()
+        fun cleanWhisperOutput(raw: String, suppressNonSpeech: Boolean = true): String {
+            var text = raw.replace(Regex("<\\|.*?\\|>"), "")
+            if (suppressNonSpeech) {
+                text = text
+                    .replace(Regex("\\[.*?\\]"), "")
+                    .replace(Regex("\\(.*?\\)"), "")
+                    .replace(Regex("\\*.*?\\*"), "")
+            } else {
+                text = text
+                    .replace("[BLANK_AUDIO]", "")
+            }
+            return text.replace(Regex("\\s+"), " ").trim()
         }
     }
 
@@ -88,7 +94,9 @@ class WhisperEngine {
     @Synchronized
     fun transcribe(
         audioSamples: FloatArray,
-        numThreads: Int = minOf(4, Runtime.getRuntime().availableProcessors())
+        numThreads: Int = minOf(4, Runtime.getRuntime().availableProcessors()),
+        suppressNonSpeech: Boolean = true,
+        verbose: Boolean = false
     ): String? {
         if (contextPtr == 0L) {
             LogKeeper.logWarning(TAG, "transcribe called without active model context")
@@ -103,10 +111,15 @@ class WhisperEngine {
             val rawResult = fullTranscribe(contextPtr, numThreads, audioSamples)
             val elapsed = System.currentTimeMillis() - startTime
 
-            LogKeeper.logEvent(TAG, "Inference completed in ${elapsed}ms")
+            if (verbose) {
+                val durationSec = audioSamples.size.toFloat() / 16000f
+                LogKeeper.logEvent(TAG, "Verbose Inference: audio=${String.format(java.util.Locale.US, "%.2f", durationSec)}s, samples=${audioSamples.size}, latency=${elapsed}ms, threads=$numThreads")
+            } else {
+                LogKeeper.logEvent(TAG, "Inference completed in ${elapsed}ms")
+            }
 
             if (rawResult != null) {
-                cleanWhisperOutput(rawResult)
+                cleanWhisperOutput(rawResult, suppressNonSpeech)
             } else {
                 null
             }
