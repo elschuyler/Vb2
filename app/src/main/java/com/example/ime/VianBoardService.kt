@@ -1,9 +1,13 @@
 package com.example.ime
 
+import android.content.BroadcastReceiver
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.os.Build
@@ -46,6 +50,8 @@ class VianBoardService : InputMethodService() {
     private var inputViewContainer: FrameLayout? = null
     private var keyboardView: VianKeyboardView? = null
     private var activeModalView: View? = null
+    private var warmClipboardView: VianClipboardModalView? = null
+    private var warmQuickNotesView: VianQuickNotesModalView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var isTempIncognitoActive = false
     private val incognitoExpireRunnable = Runnable {
@@ -57,6 +63,14 @@ class VianBoardService : InputMethodService() {
         Toast.makeText(this, "Incognito mode ended", Toast.LENGTH_SHORT).show()
     }
 
+    companion object {
+        const val ACTION_RELOAD_DICTIONARIES = "com.example.ime.ACTION_RELOAD_DICTIONARIES"
+
+        @Volatile
+        var activeInstance: VianBoardService? = null
+            private set
+    }
+
     private lateinit var clipboardStorage: ClipboardStorage
     private var clipboardManager: ClipboardManager? = null
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -64,8 +78,19 @@ class VianBoardService : InputMethodService() {
     }
     private lateinit var textEngineBridge: TextEngineBridge
 
+    val engineBridge: TextEngineBridge
+        get() = textEngineBridge
+
+    private val reloadDictsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            LogKeeper.logEvent("IME", "Received ACTION_RELOAD_DICTIONARIES broadcast")
+            textEngineBridge.reloadDictionaries()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        activeInstance = this
         LogKeeper.logComponentStart("VianBoardService")
         clipboardStorage = ClipboardStorage(this)
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -73,14 +98,39 @@ class VianBoardService : InputMethodService() {
         textEngineBridge.onSuggestionsUpdated = { suggestions, _ ->
             keyboardView?.updateSuggestions(suggestions)
         }
+        textEngineBridge.onVaultUnlockRequested = { vaultEntry, ic ->
+            showPatternUnlockModal(VaultType.PRIVACY) {
+                textEngineBridge.commitVaultPhrase(vaultEntry, ic ?: currentInputConnection)
+            }
+        }
+
+        val filter = IntentFilter(ACTION_RELOAD_DICTIONARIES)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(reloadDictsReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(reloadDictsReceiver, filter)
+        }
     }
 
     private fun capturePrimaryClip() {
         try {
             val clip = clipboardManager?.primaryClip
             if (clip != null && clip.itemCount > 0) {
+                val desc = clip.description
+                val isSensitive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    desc?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE, false) == true
+                } else false
+                if (isSensitive) {
+                    LogKeeper.logEvent("IME", "Zero-learning: skipped capturing sensitive clip")
+                    return
+                }
                 val text = clip.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
                 if (!text.isNullOrEmpty()) {
+                    // ZERO-LEARNING GUARANTEE: strictly prevent Privacy Vault phrases from entering clipboard storage
+                    if (textEngineBridge.personalDictStorage.isVaultPhrase(text)) {
+                        LogKeeper.logEvent("IME", "Zero-learning: strictly blocked Privacy Vault phrase from clipboard storage")
+                        return
+                    }
                     clipboardStorage.addClip(text)
                     LogKeeper.logEvent("IME", "Auto-captured clip into storage without modal")
                 }
@@ -139,8 +189,11 @@ class VianBoardService : InputMethodService() {
             onSuggestionClick = { candidate, slot ->
                 textEngineBridge.selectSuggestion(candidate, slot, currentInputConnection)
             }
-            onSpaceLongClick = {
-                cycleLanguageMode()
+            onSuggestionLongClick = { key, candidate, slot ->
+                handleSuggestionLongClick(key, candidate, slot)
+            }
+            onSpaceLongClick = { spaceKey ->
+                handleSpaceLongClick(spaceKey)
             }
             onLayoutUpdated = { keys, w, h ->
                 textEngineBridge.updateKeyboardModel(keys, w, h)
@@ -149,6 +202,7 @@ class VianBoardService : InputMethodService() {
         container.addView(view)
         keyboardView = view
         inputViewContainer = container
+        initWarmModals(container)
         return container
     }
 
@@ -156,6 +210,10 @@ class VianBoardService : InputMethodService() {
         super.onStartInputView(info, restarting)
         LogKeeper.logEvent("IME", "onStartInputView (restarting=$restarting)")
         keyboardView?.reloadTheme()
+
+        val textEnginePrefs = com.example.ime.engine.TextEnginePreferences(this)
+        textEngineBridge.setLiteMode(textEnginePrefs.liteMode)
+        keyboardView?.isLiteMode = textEnginePrefs.liteMode
 
         textEngineBridge.onStartInput(info, restarting)
         keyboardView?.updateSpaceLabel(textEngineBridge.currentMode.indicator)
@@ -312,7 +370,7 @@ class VianBoardService : InputMethodService() {
                 Toast.makeText(this, "Log Keeper: ${logs.size} entries", Toast.LENGTH_SHORT).show()
             }
             ToolbarTool.PERSONAL_VAULT -> {
-                Toast.makeText(this, "Personal vault: Coming soon", Toast.LENGTH_SHORT).show()
+                showPatternUnlockModal(VaultType.PRIVACY)
             }
         }
     }
@@ -385,15 +443,79 @@ class VianBoardService : InputMethodService() {
         }
     }
 
-    private fun cycleLanguageMode() {
-        val nextMode = when (textEngineBridge.currentMode) {
-            TextEngineBridge.LanguageMode.ENGLISH -> TextEngineBridge.LanguageMode.FRENCH
-            TextEngineBridge.LanguageMode.FRENCH -> TextEngineBridge.LanguageMode.DUAL
-            TextEngineBridge.LanguageMode.DUAL -> TextEngineBridge.LanguageMode.ENGLISH
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        LogKeeper.logEvent("IME", "onTrimMemory level=$level")
+        textEngineBridge.onTrimMemory(level)
+        keyboardView?.demoteColdSurfaces()
+        keyboardView?.updateSpaceLabel(textEngineBridge.currentMode.indicator)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            if (activeModalView !== warmClipboardView) {
+                warmClipboardView?.visibility = View.GONE
+            }
+            if (activeModalView !== warmQuickNotesView) {
+                warmQuickNotesView?.visibility = View.GONE
+            }
         }
-        textEngineBridge.setLanguageMode(nextMode)
-        keyboardView?.updateSpaceLabel(nextMode.indicator)
-        Toast.makeText(this, nextMode.displayName, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun handleSpaceLongClick(spaceKey: com.example.ime.keyboard.KeyData) {
+        val kv = keyboardView ?: return
+        if (textEngineBridge.currentMode != TextEngineBridge.LanguageMode.DUAL) {
+            // When a single language is active, long-pressing spacebar allows instant switching back to Bilingual Mode
+            textEngineBridge.setLanguageMode(TextEngineBridge.LanguageMode.DUAL)
+            kv.updateSpaceLabel(TextEngineBridge.LanguageMode.DUAL.indicator)
+            Toast.makeText(this, "Switched to Bilingual Mode (EN • FR)", Toast.LENGTH_SHORT).show()
+        } else {
+            // When in Bilingual Mode, opens the full language selector popup
+            showLanguageSelectorPopup(spaceKey)
+        }
+    }
+
+    private fun showLanguageSelectorPopup(spaceKey: com.example.ime.keyboard.KeyData) {
+        val kv = keyboardView ?: return
+        val popup = com.example.ime.popup.LanguageSelectorPopup(
+            context = this,
+            currentMode = textEngineBridge.currentMode,
+            onModeSelected = { newMode ->
+                textEngineBridge.setLanguageMode(newMode)
+                kv.updateSpaceLabel(newMode.indicator)
+                Toast.makeText(this, newMode.displayName, Toast.LENGTH_SHORT).show()
+            }
+        )
+        popup.show(kv, spaceKey)
+    }
+
+    private fun handleSuggestionLongClick(key: com.example.ime.keyboard.KeyData, candidate: String, slot: Int) {
+        val kv = keyboardView ?: return
+        if (candidate.isBlank()) return
+
+        val isBuiltIn = textEngineBridge.isBuiltInWord(candidate)
+        val isPersonal = !isBuiltIn
+
+        val similarCandidates = textEngineBridge.getAllAlternativeCandidates(excludeWord = candidate)
+
+        val popup = com.example.ime.popup.SuggestionCandidatePopup(
+            context = this,
+            targetWord = candidate,
+            isPersonalDictionary = isPersonal,
+            similarWords = similarCandidates,
+            onDeleteOrDemote = { isDelete ->
+                if (isDelete) {
+                    textEngineBridge.unlearnWord(candidate)
+                    textEngineBridge.removeCandidateAndRefresh(candidate)
+                    Toast.makeText(this, "Purged \"$candidate\" from personal dictionary", Toast.LENGTH_SHORT).show()
+                } else {
+                    textEngineBridge.demoteWord(candidate)
+                    textEngineBridge.removeCandidateAndRefresh(candidate)
+                    Toast.makeText(this, "Demoted \"$candidate\" (scoring penalty applied)", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onWordSelected = { selectedWord ->
+                textEngineBridge.selectSuggestion(selectedWord, slot, currentInputConnection)
+            }
+        )
+        popup.show(kv, key)
     }
 
     private fun sendDelete() {
@@ -552,15 +674,14 @@ class VianBoardService : InputMethodService() {
         return if (kbHeight > minHeightPx) kbHeight else minHeightPx
     }
 
-    private fun showClipboardModal() {
-        val container = inputViewContainer ?: return
-        dismissActiveModal()
-
-        val clipboardView = VianClipboardModalView(this).apply {
+    private fun initWarmModals(container: FrameLayout) {
+        // Pre-warm Clipboard Modal
+        val clipboard = VianClipboardModalView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                getModalHeight()
+                FrameLayout.LayoutParams.WRAP_CONTENT
             )
+            visibility = View.GONE
             onDismissToAlpha = { dismissActiveModal() }
             onCommitText = { text -> currentInputConnection?.commitText(text, 1) }
             onDelete = { sendDelete() }
@@ -578,22 +699,16 @@ class VianBoardService : InputMethodService() {
                 }
             }
         }
+        container.addView(clipboard)
+        warmClipboardView = clipboard
 
-        keyboardView?.visibility = View.INVISIBLE
-        container.addView(clipboardView)
-        activeModalView = clipboardView
-        LogKeeper.logEvent("IME", "Clipboard modal opened on-demand")
-    }
-
-    private fun showQuickNotesModal() {
-        val container = inputViewContainer ?: return
-        dismissActiveModal()
-
-        val quickNotesView = VianQuickNotesModalView(this).apply {
+        // Pre-warm Quick Notes (Prompt List) Modal
+        val quickNotes = VianQuickNotesModalView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                getModalHeight()
+                FrameLayout.LayoutParams.WRAP_CONTENT
             )
+            visibility = View.GONE
             onDismissToAlpha = { dismissActiveModal() }
             onCommitText = { text -> currentInputConnection?.commitText(text, 1) }
             onDelete = { sendDelete() }
@@ -622,11 +737,54 @@ class VianBoardService : InputMethodService() {
                 }
             }
         }
+        container.addView(quickNotes)
+        warmQuickNotesView = quickNotes
+        LogKeeper.logEvent("IME", "Warm modals pre-initialized (Clipboard & Prompt List)")
+    }
+
+    private fun showClipboardModal() {
+        val container = inputViewContainer ?: return
+        dismissActiveModal()
+
+        val modalHeight = getModalHeight()
+        val clipboardView = warmClipboardView ?: VianClipboardModalView(this).also {
+            warmClipboardView = it
+            container.addView(it)
+        }
+
+        clipboardView.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            modalHeight
+        )
+        clipboardView.syncPrimaryClip()
+        clipboardView.refreshData()
 
         keyboardView?.visibility = View.INVISIBLE
-        container.addView(quickNotesView)
+        clipboardView.visibility = View.VISIBLE
+        activeModalView = clipboardView
+        LogKeeper.logEvent("IME", "Warm Clipboard modal displayed instantly")
+    }
+
+    private fun showQuickNotesModal() {
+        val container = inputViewContainer ?: return
+        dismissActiveModal()
+
+        val modalHeight = getModalHeight()
+        val quickNotesView = warmQuickNotesView ?: VianQuickNotesModalView(this).also {
+            warmQuickNotesView = it
+            container.addView(it)
+        }
+
+        quickNotesView.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            modalHeight
+        )
+        quickNotesView.refreshData()
+
+        keyboardView?.visibility = View.INVISIBLE
+        quickNotesView.visibility = View.VISIBLE
         activeModalView = quickNotesView
-        LogKeeper.logEvent("IME", "Quick Notes modal opened on-demand")
+        LogKeeper.logEvent("IME", "Warm Quick Notes (Prompt List) modal displayed instantly")
     }
 
     private fun showEmojiModal() {
@@ -900,7 +1058,7 @@ class VianBoardService : InputMethodService() {
         }
     }
 
-    private fun showPatternUnlockModal(vaultType: VaultType) {
+    private fun showPatternUnlockModal(vaultType: VaultType, onPendingCommit: (() -> Unit)? = null) {
         val container = inputViewContainer ?: return
         dismissActiveModal()
 
@@ -917,6 +1075,7 @@ class VianBoardService : InputMethodService() {
                 } else {
                     VaultSessionManager.unlockPrivacy(VaultSessionManager.PRIVACY_SESSION_DEFAULT_MS)
                     Toast.makeText(this@VianBoardService, "Privacy Vault Unlocked (Session: 5m)", Toast.LENGTH_SHORT).show()
+                    onPendingCommit?.invoke()
                 }
                 dismissActiveModal()
                 LogKeeper.logEvent("IME", "$type vault session activated via pattern unlock")
@@ -934,7 +1093,11 @@ class VianBoardService : InputMethodService() {
             if (modal is VianVoiceModalView) {
                 modal.stopVoiceInput()
             }
-            inputViewContainer?.removeView(modal)
+            if (modal === warmClipboardView || modal === warmQuickNotesView) {
+                modal.visibility = View.GONE
+            } else {
+                inputViewContainer?.removeView(modal)
+            }
             activeModalView = null
         }
         keyboardView?.visibility = View.VISIBLE
@@ -993,6 +1156,9 @@ class VianBoardService : InputMethodService() {
             // Ignore
         }
         dismissActiveModal()
+        if (textEngineBridge.personalDictStorage.isAutoRelockOnCloseEnabled()) {
+            VaultSessionManager.lockPrivacy()
+        }
         textEngineBridge.onFinishInput(currentInputConnection)
         keyboardView?.updateSpaceLabel(textEngineBridge.currentMode.indicator)
         super.onFinishInputView(finishingInput)
@@ -1007,6 +1173,15 @@ class VianBoardService : InputMethodService() {
         candidatesEnd: Int
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+
+        // HeliBoard Bug B Safeguard: Filter out delayed, out-of-order selection updates during rapid local editing
+        if (textEngineBridge.prefs.cursorSyncGuard) {
+            val timeSinceLastEdit = System.currentTimeMillis() - textEngineBridge.getLastLocalEditTimestamp()
+            if (timeSinceLastEdit < 150L && textEngineBridge.wordComposer.isComposingWord) {
+                return
+            }
+        }
+
         if (candidatesStart < 0 && textEngineBridge.wordComposer.isComposingWord) {
             textEngineBridge.wordComposer.reset()
             textEngineBridge.clearSuggestions()
@@ -1021,6 +1196,14 @@ class VianBoardService : InputMethodService() {
             // Ignore
         }
         dismissActiveModal()
+        warmClipboardView = null
+        warmQuickNotesView = null
+        try {
+            unregisterReceiver(reloadDictsReceiver)
+        } catch (_: Exception) {}
+        if (activeInstance === this) {
+            activeInstance = null
+        }
         textEngineBridge.onDestroy()
         inputViewContainer = null
         keyboardView = null

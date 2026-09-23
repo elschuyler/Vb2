@@ -1,5 +1,6 @@
 package com.example.ime.engine
 
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -17,11 +18,12 @@ import helium314.keyboard.keyboard.KeyboardElement
 import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.KeyboardMode
 import helium314.keyboard.keyboard.internal.KeyboardParams
+import com.android.inputmethod.keyboard.ProximityInfo
 import helium314.keyboard.latin.DictionaryFacilitator
 import helium314.keyboard.latin.DictionaryFacilitatorImpl
 import helium314.keyboard.latin.NgramContext
-import helium314.keyboard.latin.R
-import helium314.keyboard.latin.RichInputMethodSubtype
+import com.example.R
+import com.example.RichInputMethodSubtype
 import helium314.keyboard.latin.Suggest
 import helium314.keyboard.latin.SuggestedWords
 import helium314.keyboard.latin.WordComposer
@@ -31,18 +33,51 @@ import helium314.keyboard.latin.common.CoordinateUtils
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import com.example.ime.dictionary.PersonalDictionaryStorage
+import com.example.ime.dictionary.PersonalDictionaryEntry
+import com.example.ime.dictionary.DictionaryPartition
+import com.example.ime.security.VaultSessionManager
 
 /**
  * TextEngineBridge coordinates bilingual orchestration (English, French, Dual mode),
  * native JNI proximity calculation, composing span lifecycle, and suggestion pipelines.
  */
 class TextEngineBridge(private val context: Context) {
+
+    companion object {
+        @Volatile
+        var activeInstance: TextEngineBridge? = null
+            private set
+    }
+
+    init {
+        activeInstance = this
+    }
+
+    val prefs: TextEnginePreferences = TextEnginePreferences(context)
+    private val localEditGeneration = AtomicLong(0L)
+    @Volatile
+    private var lastLocalEditTimestamp: Long = 0L
+
+    var isWebEditor: Boolean = false
+        private set
+
+    fun getLocalEditGeneration(): Long = localEditGeneration.get()
+    fun getLastLocalEditTimestamp(): Long = lastLocalEditTimestamp
+    fun incrementEditGeneration(): Long {
+        lastLocalEditTimestamp = System.currentTimeMillis()
+        return localEditGeneration.incrementAndGet()
+    }
 
     enum class LanguageMode(val displayName: String, val indicator: String) {
         ENGLISH("English", "EN"),
@@ -52,6 +87,23 @@ class TextEngineBridge(private val context: Context) {
 
     var currentMode: LanguageMode = LanguageMode.ENGLISH
         private set
+
+    // Lite Mode state (Phase 3.2):
+    // Disables gesture / swipe typing trajectory processing while preserving bilingual dictionaries and trigram predictions.
+    var isLiteMode: Boolean = false
+        private set
+
+    fun setLiteMode(enabled: Boolean) {
+        isLiteMode = enabled
+        LogKeeper.logEvent("TextEngineBridge", "Lite mode set to $enabled")
+    }
+
+    // Memory Trim Safeguard (Phase 3.3):
+    // When Android OS signals low memory, French dictionary is gracefully shed and retained as English-only.
+    // French remains unloaded until: 1) Debounce timer expires (5m), 2) Next keyboard open, or 3) User forces reload via spacebar.
+    private var isFrenchTrimmedByMemory: Boolean = false
+    private var frenchTrimDebounceJob: Job? = null
+    private val FRENCH_TRIM_DEBOUNCE_MS = 5 * 60 * 1000L // 5 minutes conservative debounce
 
     // Dormancy & On-Demand Lifecycle management:
     // French is dormant and unloaded until explicitly needed or triggered (diacritics or French suggestion selection).
@@ -76,11 +128,19 @@ class TextEngineBridge(private val context: Context) {
 
     private val settingsValues = SettingsValuesForSuggestion(false, false)
     private var lastCommittedWord: String? = null
+    private val committedWordsHistory = ArrayList<String>()
     private var currentSuggestedWords: SuggestedWords? = null
+    @Volatile
+    private var currentCandidatesList: List<String> = emptyList()
     private val frenchWordsInLastQuery = mutableSetOf<String>()
 
     // Callback to update UI suggestions bar
     var onSuggestionsUpdated: ((List<String>, SuggestedWords?) -> Unit)? = null
+
+    // Partitioned Personal Dictionary & Privacy Vault storage
+    val personalDictStorage = PersonalDictionaryStorage.getInstance(context)
+    private val vaultCandidateMap = ConcurrentHashMap<String, PersonalDictionaryEntry>()
+    var onVaultUnlockRequested: ((PersonalDictionaryEntry, InputConnection?) -> Unit)? = null
 
     // French accented characters that instantly awaken French from dormancy
     private val frenchDiacritics = setOf(
@@ -159,9 +219,48 @@ class TextEngineBridge(private val context: Context) {
     }
 
     /**
+     * Safely reloads all dictionaries on background IO after an import or user dictionary change.
+     */
+    fun reloadDictionaries() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                LogKeeper.logEvent("TextEngineBridge", "Reloading dictionaries after import/change...")
+                enFacilitator?.closeDictionaries()
+                frFacilitator?.closeDictionaries()
+                enFacilitator = null
+                enSuggest = null
+                frFacilitator = null
+                frSuggest = null
+                initializeDictionaries()
+                if (currentMode == LanguageMode.FRENCH || currentMode == LanguageMode.DUAL) {
+                    ensureFrenchLoaded()
+                }
+                LogKeeper.logEvent("TextEngineBridge", "Dictionaries reloaded successfully after import")
+            } catch (t: Throwable) {
+                LogKeeper.logError("TextEngineBridge", "DICT_RELOAD_FAIL", "${t.javaClass.simpleName}: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Adds a word to the active personal dictionary.
+     */
+    fun addToUserDictionary(word: String, frequency: Int = 250): Boolean {
+        return enFacilitator?.addToUserDictionary(word, frequency) ?: false
+    }
+
+    /**
      * Awakens French mode dynamically (e.g. from diacritic, French word selection, or explicit mode change).
      */
-    fun awakenFrench(targetMode: LanguageMode = LanguageMode.DUAL) {
+    fun awakenFrench(targetMode: LanguageMode = LanguageMode.DUAL, forceReload: Boolean = false) {
+        if (isFrenchTrimmedByMemory && !forceReload) {
+            LogKeeper.logEvent("TextEngineBridge", "French awaken suppressed due to OS memory trim")
+            return
+        }
+        if (forceReload) {
+            frenchTrimDebounceJob?.cancel()
+            isFrenchTrimmedByMemory = false
+        }
         isFrenchDormant = false
         nonFrenchWordStreak = 0
         currentMode = targetMode
@@ -280,9 +379,33 @@ class TextEngineBridge(private val context: Context) {
                 params.onAddKey(k)
             }
 
-            activeKeyboard = Keyboard(params)
+            activeKeyboard?.proximityInfo?.close()
+            val kb = Keyboard(params)
+            kb.proximityInfo = ProximityInfo.createFromKeys(width, height, keys)
+            activeKeyboard = kb
         } catch (e: Throwable) {
             LogKeeper.logError("TextEngineBridge", "KB_MODEL_UPDATE_FAIL", "${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    /**
+     * Handles OS memory trim signals (Phase 3.3). Gracefully sheds French dictionary during RAM pressure.
+     */
+    fun onTrimMemory(level: Int) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+            level == ComponentCallbacks2.TRIM_MEMORY_COMPLETE ||
+            level == ComponentCallbacks2.TRIM_MEMORY_MODERATE ||
+            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+            LogKeeper.logEvent("TextEngineBridge", "OS Memory trim signal (level=$level). Shedding French dictionary...")
+            isFrenchTrimmedByMemory = true
+            unloadFrench()
+
+            frenchTrimDebounceJob?.cancel()
+            frenchTrimDebounceJob = scope.launch(Dispatchers.Default) {
+                delay(FRENCH_TRIM_DEBOUNCE_MS)
+                LogKeeper.logEvent("TextEngineBridge", "French trim debounce timer expired. Memory pressure flag cleared.")
+                isFrenchTrimmedByMemory = false
+            }
         }
     }
 
@@ -292,7 +415,7 @@ class TextEngineBridge(private val context: Context) {
     fun setLanguageMode(mode: LanguageMode) {
         currentMode = mode
         if (mode == LanguageMode.FRENCH || mode == LanguageMode.DUAL) {
-            awakenFrench(mode)
+            awakenFrench(mode, forceReload = true)
         } else {
             sleepFrench()
         }
@@ -324,8 +447,18 @@ class TextEngineBridge(private val context: Context) {
         clearSuggestions()
         lastCommittedWord = null
 
+        // Detect web editor or browser
+        val inputType = info?.inputType ?: 0
+        val isWebVariation = (inputType and InputType.TYPE_MASK_VARIATION) == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+        val pkg = info?.packageName?.lowercase() ?: ""
+        val isBrowserPkg = pkg.contains("chrome") || pkg.contains("firefox") || pkg.contains("browser") ||
+                pkg.contains("brave") || pkg.contains("opera") || pkg.contains("webview") || pkg.contains("edge")
+        isWebEditor = isWebVariation || isBrowserPkg
+
         // French Dormancy Rule: Keep French asleep on fresh keyboard open to conserve battery/RAM
         if (!restarting) {
+            frenchTrimDebounceJob?.cancel()
+            isFrenchTrimmedByMemory = false
             if (currentMode != LanguageMode.ENGLISH) {
                 modeBeforeDormancy = currentMode
                 sleepFrench()
@@ -361,6 +494,8 @@ class TextEngineBridge(private val context: Context) {
     fun handleCharacter(char: String, touchX: Int, touchY: Int, ic: InputConnection?, info: EditorInfo?) {
         if (ic == null) return
 
+        incrementEditGeneration()
+
         if (isSensitiveInput(info)) {
             wordComposer.reset()
             clearSuggestions()
@@ -370,7 +505,7 @@ class TextEngineBridge(private val context: Context) {
 
         // Auto-Wake Trigger: Typing a French diacritic awakens French in Dual mode on-demand
         val firstCh = char.firstOrNull() ?: ' '
-        if (isFrenchDormant && frenchDiacritics.contains(firstCh)) {
+        if (isFrenchDormant && !isFrenchTrimmedByMemory && frenchDiacritics.contains(firstCh)) {
             awakenFrench(LanguageMode.DUAL)
             LogKeeper.logEvent("TextEngineBridge", "French auto-awakened by diacritic: $char")
         }
@@ -381,7 +516,13 @@ class TextEngineBridge(private val context: Context) {
         wordComposer.applyProcessedEvent(processed)
 
         val composing = wordComposer.typedWord
-        ic.setComposingText(composing, 1)
+        val useBatch = prefs.webEditorPerformanceMode && isWebEditor
+        if (useBatch) ic.beginBatchEdit()
+        try {
+            ic.setComposingText(composing, 1)
+        } finally {
+            if (useBatch) ic.endBatchEdit()
+        }
 
         querySuggestionsAsync()
     }
@@ -392,65 +533,72 @@ class TextEngineBridge(private val context: Context) {
     fun handleDelete(ic: InputConnection?, info: EditorInfo?) {
         if (ic == null) return
 
-        if (isSensitiveInput(info)) {
-            val selected = ic.getSelectedText(0)
-            if (selected.isNullOrEmpty()) {
-                ic.deleteSurroundingText(1, 0)
-            } else {
-                ic.commitText("", 1)
+        incrementEditGeneration()
+        val useBatch = prefs.webEditorPerformanceMode && isWebEditor
+        if (useBatch) ic.beginBatchEdit()
+        try {
+            if (isSensitiveInput(info)) {
+                val selected = ic.getSelectedText(0)
+                if (selected.isNullOrEmpty()) {
+                    ic.deleteSurroundingText(1, 0)
+                } else {
+                    ic.commitText("", 1)
+                }
+                return
             }
-            return
-        }
-
-        if (wordComposer.isComposingWord) {
-            val event = Event.createSoftwareKeypressEvent(KeyCode.DELETE, 0, 0, 0, false)
-            val processed = wordComposer.processEvent(event)
-            wordComposer.applyProcessedEvent(processed)
 
             if (wordComposer.isComposingWord) {
-                ic.setComposingText(wordComposer.typedWord, 1)
-                querySuggestionsAsync()
+                val event = Event.createSoftwareKeypressEvent(KeyCode.DELETE, 0, 0, 0, false)
+                val processed = wordComposer.processEvent(event)
+                wordComposer.applyProcessedEvent(processed)
+
+                if (wordComposer.isComposingWord) {
+                    ic.setComposingText(wordComposer.typedWord, 1)
+                    querySuggestionsAsync()
+                } else {
+                    ic.commitText("", 1)
+                    clearSuggestions()
+                }
             } else {
-                ic.commitText("", 1)
+                // Word resumption check: if cursor is right after a word, resume composing
+                val textBefore = ic.getTextBeforeCursor(40, 0)?.toString() ?: ""
+                if (textBefore.isNotEmpty() && textBefore.last().isLetter()) {
+                    val lastWord = textBefore.takeLastWhile { it.isLetter() }
+                    if (lastWord.length in 2..32) {
+                        ic.deleteSurroundingText(lastWord.length, 0)
+                        val codePoints = lastWord.map { it.code }.toIntArray()
+                        val coordinates = CoordinateUtils.newCoordinateArray(
+                            codePoints.size,
+                            Constants.NOT_A_COORDINATE,
+                            Constants.NOT_A_COORDINATE
+                        )
+                        wordComposer.setComposingWord(codePoints, coordinates)
+                        // Delete the final character that backspace targeted
+                        val delEv = Event.createSoftwareKeypressEvent(KeyCode.DELETE, 0, 0, 0, false)
+                        wordComposer.applyProcessedEvent(wordComposer.processEvent(delEv))
+
+                        if (wordComposer.isComposingWord) {
+                            ic.setComposingText(wordComposer.typedWord, 1)
+                            querySuggestionsAsync()
+                        } else {
+                            ic.commitText("", 1)
+                            clearSuggestions()
+                        }
+                        return
+                    }
+                }
+
+                // Normal delete fallback
+                val selected = ic.getSelectedText(0)
+                if (selected.isNullOrEmpty()) {
+                    ic.deleteSurroundingText(1, 0)
+                } else {
+                    ic.commitText("", 1)
+                }
                 clearSuggestions()
             }
-        } else {
-            // Word resumption check: if cursor is right after a word, resume composing
-            val textBefore = ic.getTextBeforeCursor(40, 0)?.toString() ?: ""
-            if (textBefore.isNotEmpty() && textBefore.last().isLetter()) {
-                val lastWord = textBefore.takeLastWhile { it.isLetter() }
-                if (lastWord.length in 2..32) {
-                    ic.deleteSurroundingText(lastWord.length, 0)
-                    val codePoints = lastWord.map { it.code }.toIntArray()
-                    val coordinates = CoordinateUtils.newCoordinateArray(
-                        codePoints.size,
-                        Constants.NOT_A_COORDINATE,
-                        Constants.NOT_A_COORDINATE
-                    )
-                    wordComposer.setComposingWord(codePoints, coordinates)
-                    // Delete the final character that backspace targeted
-                    val delEv = Event.createSoftwareKeypressEvent(KeyCode.DELETE, 0, 0, 0, false)
-                    wordComposer.applyProcessedEvent(wordComposer.processEvent(delEv))
-
-                    if (wordComposer.isComposingWord) {
-                        ic.setComposingText(wordComposer.typedWord, 1)
-                        querySuggestionsAsync()
-                    } else {
-                        ic.commitText("", 1)
-                        clearSuggestions()
-                    }
-                    return
-                }
-            }
-
-            // Normal delete fallback
-            val selected = ic.getSelectedText(0)
-            if (selected.isNullOrEmpty()) {
-                ic.deleteSurroundingText(1, 0)
-            } else {
-                ic.commitText("", 1)
-            }
-            clearSuggestions()
+        } finally {
+            if (useBatch) ic.endBatchEdit()
         }
     }
 
@@ -459,6 +607,8 @@ class TextEngineBridge(private val context: Context) {
      */
     fun handleSpace(ic: InputConnection?, info: EditorInfo?) {
         if (ic == null) return
+
+        incrementEditGeneration()
 
         if (isSensitiveInput(info)) {
             wordComposer.reset()
@@ -478,7 +628,21 @@ class TextEngineBridge(private val context: Context) {
 
             ic.beginBatchEdit()
             try {
-                ic.commitText("$wordToCommit ", 1)
+                if (prefs.atomicWordReplacement && wordToCommit != typed) {
+                    ic.finishComposingText()
+                    val textBefore = ic.getTextBeforeCursor(typed.length + 4, 0)?.toString() ?: ""
+                    if (textBefore.endsWith(typed)) {
+                        ic.deleteSurroundingText(typed.length, 0)
+                    } else if (textBefore.isNotEmpty() && textBefore.last().isLetterOrDigit()) {
+                        val matchLen = textBefore.takeLastWhile { it.isLetterOrDigit() }.length.coerceAtMost(typed.length)
+                        if (matchLen > 0) {
+                            ic.deleteSurroundingText(matchLen, 0)
+                        }
+                    }
+                    ic.commitText("$wordToCommit ", 1)
+                } else {
+                    ic.commitText("$wordToCommit ", 1)
+                }
             } finally {
                 ic.endBatchEdit()
             }
@@ -507,8 +671,41 @@ class TextEngineBridge(private val context: Context) {
     fun selectSuggestion(candidate: String, slotIndex: Int, ic: InputConnection?) {
         if (ic == null) return
 
+        // 1. Check if candidate belongs to the Privacy Vault partition
+        val vaultEntry = vaultCandidateMap[candidate] ?: personalDictStorage.getVaultEntryByPhrase(candidate)
+        if (vaultEntry != null && vaultEntry.partition == DictionaryPartition.PRIVACY_VAULT) {
+            val isUnlocked = VaultSessionManager.isPrivacyUnlocked()
+            if (!isUnlocked) {
+                // Trigger in-keyboard pattern unlock without committing plaintext yet
+                onVaultUnlockRequested?.invoke(vaultEntry, ic)
+                return
+            }
+
+            // Already unlocked: Commit raw plaintext with ZERO-LEARNING GUARANTEE!
+            commitVaultPhrase(vaultEntry, ic)
+            return
+        }
+
+        incrementEditGeneration()
+        val typedWord = wordComposer.typedWord
+        val typedLen = typedWord.length
+
         ic.beginBatchEdit()
         try {
+            if (prefs.atomicWordReplacement) {
+                ic.finishComposingText()
+                if (typedLen > 0) {
+                    val textBefore = ic.getTextBeforeCursor(typedLen + 4, 0)?.toString() ?: ""
+                    if (textBefore.endsWith(typedWord)) {
+                        ic.deleteSurroundingText(typedLen, 0)
+                    } else if (textBefore.isNotEmpty() && textBefore.last().isLetterOrDigit()) {
+                        val matchLen = textBefore.takeLastWhile { it.isLetterOrDigit() }.length.coerceAtMost(typedLen)
+                        if (matchLen > 0) {
+                            ic.deleteSurroundingText(matchLen, 0)
+                        }
+                    }
+                }
+            }
             // Replaces any existing composing span atomically
             ic.commitText("$candidate ", 1)
         } finally {
@@ -517,7 +714,7 @@ class TextEngineBridge(private val context: Context) {
 
         // Check if selected word is a French word or contains diacritics to awaken French
         val isFrenchCandidate = frenchWordsInLastQuery.contains(candidate) || candidate.any { frenchDiacritics.contains(it) }
-        if (isFrenchCandidate) {
+        if (isFrenchCandidate && !isFrenchTrimmedByMemory) {
             awakenFrench(LanguageMode.DUAL)
             nonFrenchWordStreak = 0
             LogKeeper.logEvent("TextEngineBridge", "French awakened by French suggestion selection: $candidate")
@@ -537,15 +734,62 @@ class TextEngineBridge(private val context: Context) {
         queryNextWordPredictions(candidate)
     }
 
+    /**
+     * Commits a Privacy Vault phrase atomically with Zero-Learning Guarantee.
+     * Strictly prevented from entering UserHistoryDictionary, bigrams, predictive models, or history.
+     */
+    fun commitVaultPhrase(entry: PersonalDictionaryEntry, ic: InputConnection?) {
+        if (ic == null) return
+        incrementEditGeneration()
+        val typedWord = wordComposer.typedWord
+        val typedLen = typedWord.length
+
+        ic.beginBatchEdit()
+        try {
+            if (prefs.atomicWordReplacement && typedLen > 0) {
+                ic.finishComposingText()
+                val textBefore = ic.getTextBeforeCursor(typedLen + 4, 0)?.toString() ?: ""
+                if (textBefore.endsWith(typedWord)) {
+                    ic.deleteSurroundingText(typedLen, 0)
+                } else if (textBefore.isNotEmpty() && textBefore.last().isLetterOrDigit()) {
+                    val matchLen = textBefore.takeLastWhile { it.isLetterOrDigit() }.length.coerceAtMost(typedLen)
+                    if (matchLen > 0) {
+                        ic.deleteSurroundingText(matchLen, 0)
+                    }
+                }
+            }
+            ic.commitText("${entry.phrase} ", 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+
+        wordComposer.reset()
+        // ZERO-LEARNING: Clear suggestion strip and do NOT train history or bigrams
+        mainHandler.post {
+            onSuggestionsUpdated?.invoke(emptyList(), null)
+        }
+        LogKeeper.logEvent("TextEngineBridge", "Committed vault phrase '${entry.shortcut}' with zero-learning guarantee")
+    }
+
     private fun recordWordInHistory(word: String) {
         if (word.isBlank()) return
+        // ZERO-LEARNING GUARANTEE: Block privacy phrases and shortcuts from learning models
+        if (personalDictStorage.isVaultPhrase(word) || personalDictStorage.isVaultShortcut(word)) {
+            LogKeeper.logEvent("TextEngineBridge", "Zero-learning: strictly blocked vault word from history dictionary")
+            return
+        }
+        synchronized(committedWordsHistory) {
+            committedWordsHistory.add(word)
+            while (committedWordsHistory.size > NgramContext.MAX_PREV_WORD_COUNT) {
+                committedWordsHistory.removeAt(0)
+            }
+        }
         scope.launch(Dispatchers.IO) {
             try {
-                val ngram = if (lastCommittedWord != null) {
-                    NgramContext(NgramContext.WordInfo(lastCommittedWord))
-                } else {
-                    NgramContext.EMPTY_PREV_WORDS_INFO
-                }
+                val wordsCopy = synchronized(committedWordsHistory) { ArrayList(committedWordsHistory) }
+                // Preceding words before 'word' was added
+                val prevWords = wordsCopy.dropLast(1)
+                val ngram = NgramContext.fromWords(prevWords)
                 val ts = System.currentTimeMillis() / 1000L
 
                 if (currentMode == LanguageMode.ENGLISH || currentMode == LanguageMode.DUAL) {
@@ -560,6 +804,42 @@ class TextEngineBridge(private val context: Context) {
         }
     }
 
+    /**
+     * Unlearns a word completely from user history dictionaries.
+     */
+    fun unlearnWord(word: String) {
+        if (word.isBlank()) return
+        scope.launch(Dispatchers.IO) {
+            try {
+                val wordsCopy = synchronized(committedWordsHistory) { ArrayList(committedWordsHistory) }
+                val ngram = NgramContext.fromWords(wordsCopy)
+                enFacilitator?.unlearnFromUserHistory(word, ngram)
+                frFacilitator?.unlearnFromUserHistory(word, ngram)
+                LogKeeper.logEvent("TextEngineBridge", "Unlearned word: $word")
+            } catch (e: Throwable) {
+                LogKeeper.logError("TextEngineBridge", "UNLEARN_FAIL", e.message ?: "")
+            }
+        }
+    }
+
+    /**
+     * Demotes the importance/frequency of a word in user history dictionaries without completely blacklisting it.
+     */
+    fun demoteWord(word: String) {
+        if (word.isBlank()) return
+        scope.launch(Dispatchers.IO) {
+            try {
+                val wordsCopy = synchronized(committedWordsHistory) { ArrayList(committedWordsHistory) }
+                val ngram = NgramContext.fromWords(wordsCopy)
+                enFacilitator?.demoteWord(word, ngram)
+                frFacilitator?.demoteWord(word, ngram)
+                LogKeeper.logEvent("TextEngineBridge", "Demoted word: $word")
+            } catch (e: Throwable) {
+                LogKeeper.logError("TextEngineBridge", "DEMOTE_FAIL", e.message ?: "")
+            }
+        }
+    }
+
     private fun querySuggestionsAsync() {
         val seq = sequenceNumber.incrementAndGet()
         val kb = activeKeyboard ?: return
@@ -567,11 +847,8 @@ class TextEngineBridge(private val context: Context) {
 
         scope.launch(Dispatchers.Default) {
             try {
-                val ngram = if (lastCommittedWord != null) {
-                    NgramContext(NgramContext.WordInfo(lastCommittedWord))
-                } else {
-                    NgramContext.EMPTY_PREV_WORDS_INFO
-                }
+                val wordsCopy = synchronized(committedWordsHistory) { ArrayList(committedWordsHistory) }
+                val ngram = NgramContext.fromWords(wordsCopy)
 
                 val results = mutableListOf<String>()
                 var swResult: SuggestedWords? = null
@@ -635,8 +912,30 @@ class TextEngineBridge(private val context: Context) {
                     }
                 }
 
+                // Check Partitioned Personal Dictionary & Privacy Vault
+                val currentToken = composerSnapshot.typedWord
+                val matches = personalDictStorage.findMatches(currentToken)
+                if (matches.isNotEmpty()) {
+                    val isPrivacyUnlocked = VaultSessionManager.isPrivacyUnlocked()
+                    for (entry in matches) {
+                        if (entry.partition == DictionaryPartition.PRIVACY_VAULT) {
+                            val display = if (isPrivacyUnlocked) {
+                                "🔓 ${entry.phrase}"
+                            } else {
+                                "🔒 ${PersonalDictionaryStorage.maskPhrase(entry.phrase)}"
+                            }
+                            vaultCandidateMap[display] = entry
+                            results.add(0, display)
+                        } else {
+                            // Normal partition
+                            results.add(0, entry.phrase)
+                        }
+                    }
+                }
+
                 if (seq == sequenceNumber.get()) {
                     currentSuggestedWords = swResult
+                    currentCandidatesList = results
                     withContext(Dispatchers.Main) {
                         onSuggestionsUpdated?.invoke(results, swResult)
                     }
@@ -653,7 +952,8 @@ class TextEngineBridge(private val context: Context) {
 
         scope.launch(Dispatchers.Default) {
             try {
-                val ngram = NgramContext(NgramContext.WordInfo(prevWord))
+                val wordsCopy = synchronized(committedWordsHistory) { ArrayList(committedWordsHistory) }
+                val ngram = NgramContext.fromWords(wordsCopy)
                 val emptyComposer = WordComposer()
                 val results = mutableListOf<String>()
 
@@ -682,6 +982,7 @@ class TextEngineBridge(private val context: Context) {
 
                 if (seq == sequenceNumber.get()) {
                     currentSuggestedWords = null
+                    currentCandidatesList = results
                     withContext(Dispatchers.Main) {
                         onSuggestionsUpdated?.invoke(results, null)
                     }
@@ -698,27 +999,48 @@ class TextEngineBridge(private val context: Context) {
             return
         }
 
-        // Slot 0: Raw typed string / fallback
-        out.add(typed)
-
-        // Slot 1: Auto-correction candidate (highest rank)
+        // Find primary auto-correct / high probability candidate
         var autoCorrectWord: String? = null
-        if (sw.size() > 1) {
-            autoCorrectWord = sw.getWord(1)
-        } else if (sw.size() == 1 && sw.getWord(0) != typed) {
+        val alternatives = mutableListOf<String>()
+
+        // In Lite Mode, cap trie candidate scan to at most 8 candidates to conserve CPU & battery
+        val maxScan = if (isLiteMode) minOf(8, sw.size()) else sw.size()
+
+        for (i in 0 until maxScan) {
+            val w = sw.getWord(i)
+            if (w.isEmpty()) continue
+            if (autoCorrectWord == null && w != typed) {
+                autoCorrectWord = w
+            } else if (w != typed && !alternatives.contains(w)) {
+                alternatives.add(w)
+            }
+        }
+
+        if (autoCorrectWord == null && sw.size() > 0) {
             autoCorrectWord = sw.getWord(0)
         }
 
-        if (autoCorrectWord != null && autoCorrectWord != typed) {
-            out.add(autoCorrectWord)
-        }
+        // Layout strip: [Left: typed / alt] [Center: auto-correct / primary] [Right: completion / prediction]
+        // In 3-candidate strip:
+        // Slot 0 (-200): Left candidate (typed literal if different from center, or first alt)
+        // Slot 1 (-201): Center candidate (auto-correct / highest confidence word, bolded)
+        // Slot 2 (-202): Right candidate (completion / second alternative)
 
-        // Slot 2: Alternative candidate
-        for (i in 0 until sw.size()) {
-            val w = sw.getWord(i)
-            if (w != typed && w != autoCorrectWord && !out.contains(w)) {
-                out.add(w)
-                if (out.size >= 3) break
+        if (autoCorrectWord != null && autoCorrectWord != typed) {
+            out.add(typed) // Left slot (-200)
+            out.add(autoCorrectWord) // Center slot (-201)
+            val rightAlt = alternatives.firstOrNull { it != typed && it != autoCorrectWord }
+            if (rightAlt != null) {
+                out.add(rightAlt) // Right slot (-202)
+            }
+        } else {
+            // Typed word is the best match
+            val leftAlt = alternatives.getOrNull(0)
+            if (leftAlt != null) out.add(leftAlt)
+            out.add(typed) // Center slot (-201)
+            val rightAlt = alternatives.getOrNull(1) ?: (if (leftAlt == null) alternatives.getOrNull(0) else null)
+            if (rightAlt != null && !out.contains(rightAlt)) {
+                out.add(rightAlt)
             }
         }
 
@@ -738,28 +1060,40 @@ class TextEngineBridge(private val context: Context) {
         out.add(typed)
 
         frenchWordsInLastQuery.clear()
-        val candidatePool = linkedSetOf<String>()
+        data class ScoredEntry(val word: String, val score: Int, val isFrench: Boolean)
+        val entries = mutableListOf<ScoredEntry>()
 
-        // Gather candidates from both dictionaries
         if (en != null) {
-            for (i in 0 until en.size().coerceAtMost(5)) {
-                val w = en.getWord(i)
-                if (w != typed) candidatePool.add(w)
+            val maxEn = if (isLiteMode) minOf(8, en.size()) else en.size()
+            for (i in 0 until maxEn) {
+                val info = en.getInfo(i)
+                val w = info?.mWord ?: en.getWord(i)
+                if (w.isNotEmpty() && w != typed) {
+                    val rawScore = info?.mScore ?: 0
+                    val score = if (isWordDemoted(w)) (rawScore - 250).coerceAtLeast(1) else rawScore
+                    entries.add(ScoredEntry(w, score, false))
+                }
             }
         }
         if (fr != null) {
-            for (i in 0 until fr.size().coerceAtMost(5)) {
-                val w = fr.getWord(i)
-                if (w != typed) {
-                    candidatePool.add(w)
+            val maxFr = if (isLiteMode) minOf(8, fr.size()) else fr.size()
+            for (i in 0 until maxFr) {
+                val info = fr.getInfo(i)
+                val w = info?.mWord ?: fr.getWord(i)
+                if (w.isNotEmpty() && w != typed) {
+                    val rawScore = info?.mScore ?: 0
+                    val score = if (isWordDemoted(w)) (rawScore - 250).coerceAtLeast(1) else rawScore
+                    entries.add(ScoredEntry(w, score, true))
                     frenchWordsInLastQuery.add(w)
                 }
             }
         }
 
-        for (candidate in candidatePool) {
-            if (!out.contains(candidate)) {
-                out.add(candidate)
+        // Sort candidates across English and French by descending score
+        val sortedEntries = entries.sortedByDescending { it.score }
+        for (entry in sortedEntries) {
+            if (!out.contains(entry.word)) {
+                out.add(entry.word)
                 if (out.size >= 3) break
             }
         }
@@ -767,8 +1101,92 @@ class TextEngineBridge(private val context: Context) {
 
     fun clearSuggestions() {
         currentSuggestedWords = null
+        currentCandidatesList = emptyList()
         mainHandler.post {
             onSuggestionsUpdated?.invoke(emptyList(), null)
+        }
+    }
+
+    /**
+     * Checks if a candidate is from the static built-in ROM dictionary assets (English or French).
+     */
+    fun isBuiltInWord(word: String): Boolean {
+        if (word.isBlank()) return false
+        val enBuilt = enFacilitator?.isBuiltInWord(word) ?: false
+        val frBuilt = frFacilitator?.isBuiltInWord(word) ?: false
+        return enBuilt || frBuilt
+    }
+
+    /**
+     * Checks if a candidate is a personal / learned word from user typing history.
+     */
+    fun isPersonalWord(word: String): Boolean {
+        return !isBuiltInWord(word)
+    }
+
+    /**
+     * Checks if a candidate currently has a scoring penalty applied (demoted).
+     */
+    fun isWordDemoted(word: String): Boolean {
+        val enDemoted = enFacilitator?.isWordDemoted(word) ?: false
+        val frDemoted = frFacilitator?.isWordDemoted(word) ?: false
+        return enDemoted || frDemoted
+    }
+
+    /**
+     * Retrieves all alternative/similar candidate words from the current suggestion query
+     */
+    fun getAllAlternativeCandidates(excludeWord: String? = null): List<String> {
+        val sw = currentSuggestedWords ?: return emptyList()
+        val list = mutableListOf<String>()
+        for (i in 0 until sw.size()) {
+            val w = sw.getWord(i)
+            if (w.isNotEmpty() && !list.contains(w) && (excludeWord == null || !w.equals(excludeWord, ignoreCase = true))) {
+                list.add(w)
+            }
+        }
+        return list
+    }
+
+    /**
+     * Immediately removes a candidate from the active suggestions in memory
+     * and refreshes the suggestion strip with the next best candidate.
+     */
+    fun removeCandidateAndRefresh(removedWord: String) {
+        val current = currentSuggestedWords
+        val currentList = currentCandidatesList.toMutableList()
+
+        // 1. Remove the target word from current candidate strip list
+        currentList.removeAll { it.equals(removedWord, ignoreCase = true) }
+
+        // 2. Filter SuggestedWords
+        val newSuggestedWords = if (current != null) {
+            val filteredInfoList = ArrayList<SuggestedWords.SuggestedWordInfo>()
+            for (i in 0 until current.size()) {
+                val info = current.getInfo(i)
+                val w = info?.mWord ?: current.getWord(i)
+                if (!w.equals(removedWord, ignoreCase = true)) {
+                    filteredInfoList.add(info ?: SuggestedWords.SuggestedWordInfo(w))
+                }
+            }
+            SuggestedWords(filteredInfoList, current.mWillAutoCorrect, current.mIsPunctuationSuggestions)
+        } else null
+        currentSuggestedWords = newSuggestedWords
+
+        // 3. Find next available alternative candidate to backfill the slot up to 3 candidates
+        val alternatives = getAllAlternativeCandidates(excludeWord = removedWord)
+        for (alt in alternatives) {
+            if (!alt.equals(removedWord, ignoreCase = true) && !currentList.contains(alt)) {
+                currentList.add(alt)
+                if (currentList.size >= 3) break
+            }
+        }
+
+        currentCandidatesList = currentList
+
+        // 4. Immediately notify listener on Main thread so strip invalidates in real-time
+        mainHandler.post {
+            onSuggestionsUpdated?.invoke(currentList, newSuggestedWords)
         }
     }
 

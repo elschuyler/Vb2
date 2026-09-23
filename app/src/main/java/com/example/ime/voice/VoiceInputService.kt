@@ -263,7 +263,9 @@ class VoiceInputService : Service(), AudioRecordPipeline.AudioPipelineListener {
 
         inferenceExecutor.execute {
             try {
-                val rawText = whisperEngine.transcribe(samplesCopy)
+                val suppress = VoiceSettingsPreferences.isSuppressNonSpeechEnabled(this@VoiceInputService)
+                val verbose = VoiceSettingsPreferences.isVerboseModeEnabled(this@VoiceInputService)
+                val rawText = whisperEngine.transcribe(samplesCopy, suppressNonSpeech = suppress, verbose = verbose)
                 if (!rawText.isNullOrBlank()) {
                     // Apply user word replacements
                     val processedText = WordReplacementStore.applyReplacements(this@VoiceInputService, rawText)

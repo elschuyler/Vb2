@@ -12,7 +12,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.HapticFeedbackConstants
 import androidx.core.content.ContextCompat
-import helium314.keyboard.latin.R
+import com.example.R
 import com.example.ime.toolbar.ToolbarPreferences
 import com.example.ime.toolbar.ToolbarTool
 
@@ -46,8 +46,12 @@ class VianKeyboardView @JvmOverloads constructor(
     var onCommaPopupSelected: ((String) -> Unit)? = null
     var onSymbolsLongClick: (() -> Unit)? = null
     var onSuggestionClick: ((String, Int) -> Unit)? = null
-    var onSpaceLongClick: (() -> Unit)? = null
+    var onSuggestionLongClick: ((KeyData, String, Int) -> Unit)? = null
+    var onSpaceLongClick: ((KeyData) -> Unit)? = null
     var onLayoutUpdated: ((List<KeyData>, Int, Int) -> Unit)? = null
+
+    // Lite Mode toggle (Phase 3.2): Disables gesture trajectory processing
+    var isLiteMode: Boolean = false
 
     private val toolbarPrefs = ToolbarPreferences(context)
     private val iconCache = mutableMapOf<Int, Drawable>()
@@ -217,7 +221,12 @@ class VianKeyboardView @JvmOverloads constructor(
             } else if (key.type == KeyType.SPACE) {
                 isLongPressTriggered = true
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                onSpaceLongClick?.invoke()
+                onSpaceLongClick?.invoke(key)
+            } else if (key.type == KeyType.SUGGESTION) {
+                isLongPressTriggered = true
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                val slotIndex = -(key.code + 200)
+                onSuggestionLongClick?.invoke(key, key.label, slotIndex)
             } else if (key.type == KeyType.TOOLBAR_TOOL) {
                 key.tool?.let { tool ->
                     isLongPressTriggered = true
@@ -298,6 +307,7 @@ class VianKeyboardView @JvmOverloads constructor(
         actionKeyBevelPaint.color = theme.actionKeyBevelColor
         enterKeyBevelPaint.color = 0xFF263238.toInt()
 
+        suggestionDividerPaint.color = (theme.textColor and 0x00FFFFFF) or 0x22000000
         suggestionDividerPaint.strokeWidth = 1f * density
 
         borderPaint.color = theme.borderColor
@@ -315,11 +325,11 @@ class VianKeyboardView @JvmOverloads constructor(
         hintPaint.color = theme.hintColor
         hintPaint.textSize = 10.5f * density
 
-        toolbarTextPaint.color = Color.BLACK
+        toolbarTextPaint.color = theme.textColor
         toolbarTextPaint.textSize = 14.5f * density
 
-        suggestionBoldPaint.color = Color.BLACK
-        suggestionBoldPaint.textSize = 14.5f * density
+        suggestionBoldPaint.color = theme.textColor
+        suggestionBoldPaint.textSize = 15f * density
 
         iconStrokePaint.color = theme.textColor
         iconStrokePaint.strokeWidth = 2.2f * density
@@ -399,10 +409,10 @@ class VianKeyboardView @JvmOverloads constructor(
                 val anchorRadius = circleDiameter / 2f
                 canvas.drawRoundRect(tempRectF, anchorRadius, anchorRadius, bgPaint)
                 if (layout.isIncognitoActive) {
-                    drawVectorIcon(canvas, tempRectF, R.drawable.sym_keyboard_incognito_lxx, 14f * density, Color.BLACK)
+                    drawVectorIcon(canvas, tempRectF, R.drawable.sym_keyboard_incognito_lxx, 14f * density, theme.textColor)
                 } else {
                     val chevronRes = if (layout.isToolbarExpanded) R.drawable.ic_chevron_left else R.drawable.ic_chevron_right
-                    drawVectorIcon(canvas, tempRectF, chevronRes, 13f * density, Color.BLACK)
+                    drawVectorIcon(canvas, tempRectF, chevronRes, 13f * density, theme.textColor)
                 }
             }
 
@@ -420,7 +430,7 @@ class VianKeyboardView @JvmOverloads constructor(
 
                 if (key.type == KeyType.TOOLBAR_TOOL) {
                     key.tool?.let { tool ->
-                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, Color.BLACK)
+                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, theme.textColor)
                     }
                 } else {
                     val textY = key.bounds.centerY() - ((toolbarTextPaint.descent() + toolbarTextPaint.ascent()) / 2)
@@ -438,7 +448,7 @@ class VianKeyboardView @JvmOverloads constructor(
                 }
                 if (key.type == KeyType.TOOLBAR_TOOL) {
                     key.tool?.let { tool ->
-                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, Color.BLACK)
+                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, theme.textColor)
                     }
                 }
             }
@@ -471,10 +481,10 @@ class VianKeyboardView @JvmOverloads constructor(
                     val anchorRadius = circleDiameter / 2f
                     canvas.drawRoundRect(tempRectF, anchorRadius, anchorRadius, bgPaint)
                     if (layout.isIncognitoActive) {
-                        drawVectorIcon(canvas, tempRectF, R.drawable.sym_keyboard_incognito_lxx, 14f * density, Color.BLACK)
+                        drawVectorIcon(canvas, tempRectF, R.drawable.sym_keyboard_incognito_lxx, 14f * density, theme.textColor)
                     } else {
                         val chevronRes = if (layout.isToolbarExpanded) R.drawable.ic_chevron_left else R.drawable.ic_chevron_right
-                        drawVectorIcon(canvas, tempRectF, chevronRes, 13f * density, Color.BLACK)
+                        drawVectorIcon(canvas, tempRectF, chevronRes, 13f * density, theme.textColor)
                     }
                 } else if (key.type == KeyType.TOOLBAR_TOOL) {
                     if (key.isPressed) {
@@ -482,7 +492,7 @@ class VianKeyboardView @JvmOverloads constructor(
                         canvas.drawRoundRect(key.bounds, toolRadius, toolRadius, pressedKeyPaint)
                     }
                     key.tool?.let { tool ->
-                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, Color.BLACK)
+                        drawVectorIcon(canvas, key.bounds, tool.iconResId, 18f * density, theme.textColor)
                     }
                 } else if (key.type == KeyType.SUGGESTION) {
                     val bgPaint = if (key.isPressed) pressedKeyPaint else toolbarBackgroundPaint
@@ -976,6 +986,22 @@ class VianKeyboardView @JvmOverloads constructor(
     fun updateSpaceLabel(label: String) {
         if (layout.spaceLabel != label) {
             layout.spaceLabel = label
+            if (width > 0 && height > 0) {
+                val density = resources.displayMetrics.density
+                layout.buildLayout(width.toFloat(), height.toFloat(), theme, density, bottomNavInsetPx)
+            }
+            invalidate()
+        }
+    }
+
+    /**
+     * Cold Surfaces Demotion (Phase 3.4): Purges transient symbol/numpad layout state and
+     * popup windows on low-memory trim signals or keyboard close.
+     */
+    fun demoteColdSurfaces() {
+        popupWindow.dismiss()
+        if (layout.mode != KeyboardMode.CHARACTERS) {
+            layout.mode = KeyboardMode.CHARACTERS
             if (width > 0 && height > 0) {
                 val density = resources.displayMetrics.density
                 layout.buildLayout(width.toFloat(), height.toFloat(), theme, density, bottomNavInsetPx)

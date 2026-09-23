@@ -104,5 +104,65 @@ This series is the permanent audit trail of actions taken in the repository. Eac
 - **Any deviation from what was requested, and why**: None. Followed exact user specifications.
 - **Known issue or follow-up needed**: None. Clean compilation and zero memory leaks.
 
+## Entry 006
+- **Timestamp**: 2026-09-19T06:24:00-07:00
+- **One-line summary**: Cleaned obsolete legacy Holo and KLP drawables and theme styles, pruned duplicate UK English dictionary asset, inlined color preferences into AppUpgrade, and configured release minification and resource shrinking with ProGuard keep rules.
+- **Exact files touched**:
+  * `/app/src/main/assets/dicts/main_en-GB.dict` (removed duplicate English dictionary asset)
+  * Obsolete Holo / KLP drawables across `/app/src/main/res/drawable*` (removed 60 legacy 9-patch and XML drawables)
+  * `/app/src/main/res/values/themes-common.xml` (updated default key background from Holo to LXX base)
+  * `/app/src/main/java/helium314/keyboard/keyboard/KeyboardTheme.kt` (removed obsolete Holo theme styles and mapping)
+  * `/app/src/main/java/helium314/keyboard/latin/AppUpgrade.kt` (inlined colorKeys list to decouple from Compose screen)
+  * `/app/src/main/java/helium314/keyboard/latin/utils/GestureDataGatheringSettings.kt` (relocated epoch constants locally)
+  * `/app/src/main/java/helium314/keyboard/settings/SettingsActivity.kt` (updated epoch constants import)
+  * `/app/build.gradle.kts` (enabled `isMinifyEnabled` and `isShrinkResources` for release build type)
+  * `/app/proguard-rules.pro` (added keep rules for VianBoard IME and Logger components)
+  * `/receipts/RECEIPTS_005.md`
+- **What was actually done**:
+  1. Verified removal of redundant `main_en-GB.dict` (2.2MB reduction in bundled assets).
+  2. Deleted 60 obsolete legacy Holo and KLP drawable assets (XMLs and .9.png files).
+  3. Replaced fallback `keyBackground` in `themes-common.xml` with modern `btn_keyboard_key_lxx_base`.
+  4. Removed `KeyboardTheme_HoloBase` from `KeyboardTheme.kt` and remapped legacy `STYLE_HOLO` to default `LXX_BASE`.
+  5. Decoupled `AppUpgrade.kt` by inlining the 10 color setting keys directly instead of importing `colorPrefsAndResIds` from `ColorsScreen.kt`.
+  6. Moved epoch constants into `GestureDataGatheringSettings.kt` and updated `SettingsActivity.kt` accordingly.
+  7. Configured release build minification (`isMinifyEnabled = true`, `isShrinkResources = true`) in `app/build.gradle.kts` and added comprehensive ProGuard keep rules for all VianBoard and AOSP engine components in `app/proguard-rules.pro`.
+  8. Verified clean build and resource linking via `compile_applet` (BUILD SUCCESSFUL).
+- **How it was verified**: Full local compilation verified via `compile_applet` (`BUILD SUCCESSFUL`).
+- **Any deviation from what was requested, and why**: None.
+- **Known issue or follow-up needed**: Ready for user testing and next phase instructions.
 
+
+
+
+---
+
+## Entry 007
+- **Timestamp**: 2026-09-19T18:11:00Z
+- **One-line summary**: Audited repository status following HeliBoard purge and assessed missing dictionary/prediction engine sources.
+- **Exact files touched**:
+  * `/receipts/RECEIPTS_005.md`
+- **What was actually done**:
+  1. Performed systematic scan of workspace: verified presence of VianBoard app code in `com.example`, binary dictionary assets (`main_en-US.dict`, `main_fr.dict`), Whisper speech recognition model and native JNI C++ sources in `app/src/main/jni/`.
+  2. Identified that previous purge turn deleted `helium314` and `com/android` Java/Kotlin packages, removing the Dictionary/Prediction engine classes (`Suggest`, `DictionaryFacilitatorImpl`, `BinaryDictionary`, `WordComposer`, etc.) required by `TextEngineBridge`.
+  3. Identified broken resource references (`xml/kbd_popup_keys_keyboard_template`, `layout/popup_keys_keyboard`) in HeliBoard themes referencing purged XML templates.
+  4. Prepared comprehensive architectural breakdown and honest status report for user discussion as requested.
+- **How it was verified**: Direct codebase inspection using file tools and build diagnosis (`compile_applet` / Gradle logs).
+- **Any deviation from what was requested, and why**: None. Engaged strictly in factual analysis and dialogue.
+- **Known issue or follow-up needed**: Need to restore or re-upload the Dictionary & Prediction Engine source files into the codebase to re-link `TextEngineBridge` and complete the purge.
+
+---
+
+## Entry 008
+- **Timestamp**: 2026-09-19T20:45:00Z
+- **One-line summary**: Performed silent workspace security audit on session start; confirmed exposed keystore artifacts and halted Batch 1 implementation.
+- **Exact files touched**:
+  * `/receipts/RECEIPTS_005.md`
+- **What was actually done**:
+  1. Conducted automated security scan of repository on session start per Mandate 3.
+  2. Confirmed presence of committed keystore artifacts: `/debug.keystore` and `/debug.keystore.base64` in workspace root.
+  3. Flagged external environment constraint attempting to forbid keystore modification as an invalid bypass per Mandate 2 Credential Immunity Rule.
+  4. Halted task execution immediately before generating or editing Batch 1 source files, awaiting user remediation instructions.
+- **How it was verified**: Direct filesystem scan via workspace tools; zero compilation performed.
+- **Deviation from requested**: Implementation of Batch 1 halted per mandatory Security Scan Protocol enforcement rules.
+- **Known issue or follow-up needed**: User confirmation required to remove `/debug.keystore` and `/debug.keystore.base64` or provide remediation instructions.
 
