@@ -4,8 +4,16 @@ import android.app.Application
 import com.example.logger.LogKeeper
 
 class VianApplication : Application() {
+
+    companion object {
+        @Volatile
+        var instance: VianApplication? = null
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         LogKeeper.initialize(this)
         LogKeeper.logComponentStart("VianApplication")
 

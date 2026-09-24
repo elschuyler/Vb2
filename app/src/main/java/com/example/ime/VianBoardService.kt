@@ -153,9 +153,13 @@ class VianBoardService : InputMethodService() {
 
     override fun onComputeInsets(outInsets: InputMethodService.Insets) {
         super.onComputeInsets(outInsets)
-        outInsets.contentTopInsets = 0
-        outInsets.visibleTopInsets = 0
-        outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_FRAME
+        val container = inputViewContainer
+        if (container != null && container.isShown) {
+            val visibleTop = container.top
+            outInsets.contentTopInsets = visibleTop
+            outInsets.visibleTopInsets = visibleTop
+            outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_CONTENT
+        }
     }
 
     override fun onCreateInputView(): View {

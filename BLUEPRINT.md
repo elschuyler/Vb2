@@ -211,6 +211,11 @@ VianBoard is a fully customizable, privacy-conscious offline Android keyboard ap
   - Created `app/src/main/res/xml/method_vian.xml` and registered `com.example.ime.VianBoardService` as the system InputMethod in `AndroidManifest.xml`.
   - Wired `MainActivity` to launch `SettingsActivity` directly, and registered all 10 VianBoard settings activities, dialogs, voice service, and file provider.
   - Disabled `viewBinding` to prevent unnecessary stub generation, configured JUnit unit testing (`libs.junit`), and verified that all unit tests (`gradle :app:testDebugUnitTest`) and full build (`compile_applet`) pass cleanly.
+- **2026-09-24**: Resolved Process Crash Loop & Input Insets Stabilization:
+  - Added APK-bundled native library pre-check in `BinaryDictionary.loadNativeLibraryIfNeeded()`. If `libjni_latinime.so` is absent from `context.applicationInfo.nativeLibraryDir`, the loader skips `System.loadLibrary()`, preventing fallback to the system ROM's incompatible `/system/lib64/libjni_latinime.so` and stopping the fatal native `SIGSEGV` crash loop.
+  - Exposed thread-safe `instance` singleton in `VianApplication.kt`.
+  - Corrected `onComputeInsets()` in `VianBoardService.kt` to use standard `TOUCHABLE_INSETS_CONTENT` and dynamic `inputViewContainer.top` coordinates.
+  - Verified 100% test pass via `gradle :app:testDebugUnitTest` and clean build via `compile_applet`.
 
 
 

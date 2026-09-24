@@ -354,6 +354,25 @@ class BinaryDictionary(
             if (sNativeLoaded) return
             synchronized(this) {
                 if (sNativeLoaded) return
+
+                // CRITICAL DEFENSIVE GUARD:
+                // Only attempt to load the native library if it is genuinely bundled inside the APK.
+                // If not bundled, calling System.loadLibrary("jni_latinime") causes Android's dynamic linker
+                // to fall back to the system ROM's /system/lib64/libjni_latinime.so. The system ROM library
+                // has incompatible struct definitions and triggers a fatal native SIGSEGV in openNative.
+                val app = com.example.VianApplication.instance
+                val nativeLibDir = app?.applicationInfo?.nativeLibraryDir
+                val localLibFile = if (nativeLibDir != null) java.io.File(nativeLibDir, "lib$JNI_LIB_NAME.so") else null
+
+                if (localLibFile == null || !localLibFile.exists()) {
+                    sNativeLoaded = false
+                    LogKeeper.logEvent(
+                        LogTags.JNI,
+                        "Native library $JNI_LIB_NAME not bundled in APK; operating safely in pure-Kotlin mode"
+                    )
+                    return
+                }
+
                 try {
                     System.loadLibrary(JNI_LIB_NAME)
                     sNativeLoaded = true
@@ -362,7 +381,7 @@ class BinaryDictionary(
                     sNativeLoaded = false
                     LogKeeper.logWarning(
                         LogTags.JNI,
-                        "Native library $JNI_LIB_NAME not available (expected on host JVM tests): ${unsatisfied.message}"
+                        "Native library $JNI_LIB_NAME not available: ${unsatisfied.message}"
                     )
                 } catch (t: Throwable) {
                     sNativeLoaded = false
