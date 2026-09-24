@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F8FAFC"
+    android:fitsSystemWindows="true">
+
+    <!-- Top Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <TextView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:text="⌨️"
+            android:textSize="24sp"
+            android:gravity="center"
+            android:background="#EFF6FF"
+            android:layout_marginEnd="12dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Welcome to VianBoard"
+                android:textColor="#0F172A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSetupProgressText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Step 1 of 3: Enable Keyboard"
+                android:textColor="#2563EB"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSkipToSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:textColor="#64748B"
+            android:background="#F1F5F9"
+            android:minHeight="40dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
+    </LinearLayout>
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/pbSetupProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:max="3"
+        android:progress="1"
+        android:progressTint="#2563EB"
+        android:progressBackgroundTint="#E2E8F0" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Step 1 Card: Enable in Settings -->
+            <LinearLayout
+                android:id="@+id/cardStep1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tvStep1Badge"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:text="1"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:gravity="center"
+                        android:background="#2563EB"
+                        android:layout_marginEnd="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Step 1: Enable VianBoard"
+                            android:textColor="#0F172A"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Authorize VianBoard in Android Language &amp; Input settings."
+                            android:textColor="#64748B"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvStep1DoneBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✓ Enabled"
+                        android:textColor="#059669"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="#D1FAE5"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnStep1Enable"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Enable in Settings"
+                    android:textColor="#FFFFFF"
+                    android:background="#2563EB"
+                    android:minHeight="44dp"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+
+            <!-- Step 2 Card: Switch to VianBoard -->
+            <LinearLayout
+                android:id="@+id/cardStep2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:elevation="1dp"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tvStep2Badge"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:text="2"
+                        android:textColor="#64748B"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:gravity="center"
+                        android:background="#E2E8F0"
+                        android:layout_marginEnd="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Step 2: Switch to VianBoard"
+                            android:textColor="#0F172A"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Choose VianBoard as your active text-input method."
+                            android:textColor="#64748B"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvStep2DoneBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✓ Active"
+                        android:textColor="#059669"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="#D1FAE5"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnStep2Switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Switch input methods"
+                    android:textColor="#FFFFFF"
+                    android:background="#2563EB"
+                    android:minHeight="44dp"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+
+            <!-- Step 3 Card: Test & Configure -->
+            <LinearLayout
+                android:id="@+id/cardStep3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:elevation="1dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tvStep3Badge"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:text="3"
+                        android:textColor="#64748B"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:gravity="center"
+                        android:background="#E2E8F0"
+                        android:layout_marginEnd="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Step 3: Test &amp; Configure"
+                            android:textColor="#0F172A"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tap below to test VianBoard, gesture typing, and shortcuts."
+                            android:textColor="#64748B"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Interactive Test Input Field -->
+                <EditText
+                    android:id="@+id/etTestKeyboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Tap here to test typing with VianBoard... ✨"
+                    android:textColor="#0F172A"
+                    android:textColorHint="#94A3B8"
+                    android:textSize="14sp"
+                    android:background="#F8FAFC"
+                    android:padding="12dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:minLines="2" />
+
+                <!-- Action row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <Button
+                        android:id="@+id/btnOpenSettings"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Open Settings"
+                        android:textColor="#FFFFFF"
+                        android:background="#2563EB"
+                        android:minHeight="44dp"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/btnChangeKeyboard"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Switch"
+                        android:textColor="#0F172A"
+                        android:background="#E2E8F0"
+                        android:minHeight="44dp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Features Summary Banner -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#EFF6FF"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✨ What makes VianBoard unique?"
+                    android:textColor="#1E40AF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="• Smart bilingual typing: English &amp; French auto-detection\n• Air-gapped Privacy Vault: confidential phrases &amp; pattern unlock\n• Warm clipboard cards &amp; prompt list manager\n• Fully customizable toolbar &amp; quick punctuation popups"
+                    android:textColor="#3B82F6"
+                    android:textSize="12sp"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="2dp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

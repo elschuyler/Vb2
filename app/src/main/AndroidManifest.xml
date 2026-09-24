@@ -49,6 +49,12 @@
 
         <!-- VianBoard Settings Activities -->
         <activity
+            android:name="com.example.ime.setup.SetupWizardActivity"
+            android:label="Welcome to VianBoard"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true" />
+
+        <activity
             android:name="com.example.ime.settings.SettingsActivity"
             android:label="VianBoard Settings"
             android:windowSoftInputMode="adjustResize"
